@@ -7,4 +7,14 @@ layout:
 - go.kubebuilder.io/v4
 projectName: fluorescence
 repo: git.cs.nctu.edu.tw/aic/infra/fluorescence
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: aic.cs.nycu.edu.tw
+  group: fluorescence
+  kind: APISet
+  path: git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1
+  version: v1alpha1
 version: "3"
