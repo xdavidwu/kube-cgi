@@ -21,8 +21,9 @@ import (
 // APISetReconciler reconciles a APISet object
 type APISetReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	DAPIImage string
+	Scheme     *runtime.Scheme
+	DAPIImage  string
+	PullSecret *corev1.Secret
 }
 
 //+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get;list;watch;create;update;patch;delete
@@ -34,6 +35,7 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;patch
 //+kubebuilder:rbac:groups="",resources=services,verbs=create;patch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=create;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;patch
 
 // needed by dappy, set on manager to assign related rolebindings
 //+kubebuilder:rbac:groups="",resources=pods,verbs=*
@@ -199,6 +201,38 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		},
 	}
 
+	type resource struct {
+		obj       client.Object
+		statusRef **corev1.ObjectReference
+	}
+
+	resources := []resource{
+		{&serviceAccount, &apiSet.Status.ServiceAccount},
+		{&roleBinding, &apiSet.Status.RoleBinding},
+		{&deployment, &apiSet.Status.Deployment},
+		{&service, &apiSet.Status.Service},
+		{&ingress, &apiSet.Status.Ingress},
+	}
+
+	if r.PullSecret != nil {
+		secret := r.PullSecret.DeepCopy()
+		secret.TypeMeta = metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		}
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		}
+		deployment.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{
+				Name: req.Name,
+			},
+		}
+
+		resources = append(resources, resource{secret, &apiSet.Status.ImagePullSecret})
+	}
+
 	defer func() {
 		err2 := r.Status().Update(ctx, &apiSet)
 		if err2 != nil {
@@ -211,16 +245,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	// XXX?
 	soTrue := true
-	for _, obj := range []struct {
-		obj       client.Object
-		statusRef **corev1.ObjectReference
-	}{
-		{&serviceAccount, &apiSet.Status.ServiceAccount},
-		{&roleBinding, &apiSet.Status.RoleBinding},
-		{&deployment, &apiSet.Status.Deployment},
-		{&service, &apiSet.Status.Service},
-		{&ingress, &apiSet.Status.Ingress},
-	} {
+	for _, obj := range resources {
 		err = ctrl.SetControllerReference(&apiSet, obj.obj, r.Scheme)
 		if err != nil {
 			log.Error(err, "cannot set owner", "object", obj.obj)

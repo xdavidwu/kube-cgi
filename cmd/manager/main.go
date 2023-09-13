@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -38,12 +42,14 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var dapiImage string
+	var pullSecretRef string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&dapiImage, "dapi-image", "", "DAPI image to use.")
+	flag.StringVar(&pullSecretRef, "pull-secret", "", "namespace/name of imagePullSecret for DAPI image")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -79,10 +85,34 @@ func main() {
 		os.Exit(1)
 	}
 
+	var pullSecret *corev1.Secret = nil
+	if pullSecretRef != "" {
+		parts := strings.Split(pullSecretRef, "/")
+		if len(parts) != 2 {
+			panic("--pull-secret not in namespace/name")
+		}
+
+		// cache of cached client (mgr.GetClient()) not started before mgr.Start()
+		uncachedClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+		if err != nil {
+			setupLog.Error(err, "unable to create uncached client")
+			os.Exit(1)
+		}
+
+		var secret corev1.Secret
+		err = uncachedClient.Get(context.Background(), client.ObjectKey{Namespace: parts[0], Name: parts[1]}, &secret)
+		if err != nil {
+			setupLog.Error(err, "unable to get pull secret")
+			os.Exit(1)
+		}
+		pullSecret = &secret
+	}
+
 	if err = (&controller.APISetReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		DAPIImage: dapiImage,
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		DAPIImage:  dapiImage,
+		PullSecret: pullSecret,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "APISet")
 		os.Exit(1)

@@ -159,6 +159,11 @@ func (in *APISetStatus) DeepCopyInto(out *APISetStatus) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
+	if in.ImagePullSecret != nil {
+		in, out := &in.ImagePullSecret, &out.ImagePullSecret
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	if in.Deployed != nil {
 		in, out := &in.Deployed, &out.Deployed
 		*out = new(bool)

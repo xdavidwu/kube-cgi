@@ -85,12 +85,13 @@ type APISetSpec struct {
 
 // APISetStatus defines the observed state of APISet
 type APISetStatus struct {
-	ServiceAccount *corev1.ObjectReference `json:"serviceAccount,omitempty"`
-	RoleBinding    *corev1.ObjectReference `json:"roleBinding,omitempty"`
-	Deployment     *corev1.ObjectReference `json:"deployment,omitempty"`
-	Service        *corev1.ObjectReference `json:"service,omitempty"`
-	Ingress        *corev1.ObjectReference `json:"ingress,omitempty"`
-	Deployed       *bool                   `json:"deployed,omitempty"`
+	ServiceAccount  *corev1.ObjectReference `json:"serviceAccount,omitempty"`
+	RoleBinding     *corev1.ObjectReference `json:"roleBinding,omitempty"`
+	Deployment      *corev1.ObjectReference `json:"deployment,omitempty"`
+	Service         *corev1.ObjectReference `json:"service,omitempty"`
+	Ingress         *corev1.ObjectReference `json:"ingress,omitempty"`
+	ImagePullSecret *corev1.ObjectReference `json:"imagePullSecret,omitempty"`
+	Deployed        *bool                   `json:"deployed,omitempty"`
 }
 
 //+kubebuilder:object:root=true
