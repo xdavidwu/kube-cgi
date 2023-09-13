@@ -1,0 +1,23 @@
+resources:
+  - ../default
+patches:
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: fluorescence-controller-manager
+        namespace: fluorescence-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                image: ${CI_REGISTRY_IMAGE}/manager:${CI_PIPELINE_ID}
+                args:
+                  - --health-probe-bind-address=:8081
+                  - --metrics-bind-address=127.0.0.1:8080
+                  - --leader-elect
+                  - --dapi-image=${CI_REGISTRY_IMAGE}/dappy:${CI_PIPELINE_ID}
+                  - --pull-secret=fluorescence-system/gitlab-registry
+            imagePullSecrets:
+                  - name: gitlab-registry

@@ -1,0 +1,47 @@
+stages:
+  - package
+  - deploy
+
+.package:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+  script:
+    - |
+      /kaniko/executor --context $CI_PROJECT_DIR \
+        -f $CI_PROJECT_DIR/$CONTAINERFILE \
+        --build-arg IMAGE_TAG=$CI_PIPELINE_ID \
+        --destination $CI_REGISTRY_IMAGE/$IMAGE:$CI_PIPELINE_ID
+  after_script:
+    - rm /kaniko/.docker/config.json
+
+package:manager:
+  extends: .package
+  variables:
+    CONTAINERFILE: Containerfile-manager
+    IMAGE: manager
+
+package:dappy:
+  extends: .package
+  variables:
+    CONTAINERFILE: Containerfile-dappy
+    IMAGE: dappy
+
+deploy:
+  stage: deploy
+  image: alpine:edge
+  only: [main]
+  before_script:
+    - apk add kubectl gettext
+    - kubectl config use-context aic/infra/agent:aic
+  script:
+    - envsubst < config/aic/kustomization.yaml.envsubst > config/aic/kustomization.yaml
+    - kubectl apply -k config/aic
+    - |
+      kubectl create secret docker-registry gitlab-registry \
+        --docker-server="$CI_REGISTRY" --docker-username="$CI_DEPLOY_USER" \
+        --docker-password="$CI_DEPLOY_PASSWORD" --dry-run=client -o yaml \
+        | kubectl -n fluorescence-system apply -f -
