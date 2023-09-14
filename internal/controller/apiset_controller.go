@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
 )
 
 // APISetReconciler reconciles a APISet object
@@ -120,17 +121,16 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 							Image: r.DAPIImage,
 							Name:  "dapi",
 							Env: []corev1.EnvVar{
-								// XXX const the keys
 								{
-									Name:  "APISET_NAMESPACE",
+									Name:  internal.DAPIEnvAPISetNamespace,
 									Value: req.Namespace,
 								},
 								{
-									Name:  "APISET_NAME",
+									Name:  internal.DAPIEnvAPISetName,
 									Value: req.Name,
 								},
 								{
-									Name:  "APISET_RESOURCE_VERSION",
+									Name:  internal.DAPIEnvAPISetResourceVersion,
 									Value: apiSet.ObjectMeta.ResourceVersion,
 								},
 							},

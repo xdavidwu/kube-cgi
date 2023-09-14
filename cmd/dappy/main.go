@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
 )
 
 func main() {
@@ -34,9 +35,9 @@ func main() {
 		panic(err)
 	}
 
-	namespace := os.Getenv("APISET_NAMESPACE")
-	apiSetName := os.Getenv("APISET_NAME")
-	apiSetVersion := os.Getenv("APISET_RESOURCE_VERSION")
+	namespace := os.Getenv(internal.DAPIEnvAPISetNamespace)
+	apiSetName := os.Getenv(internal.DAPIEnvAPISetName)
+	apiSetVersion := os.Getenv(internal.DAPIEnvAPISetResourceVersion)
 
 	scheme := runtime.NewScheme()
 	clientgoscheme.AddToScheme(scheme)
