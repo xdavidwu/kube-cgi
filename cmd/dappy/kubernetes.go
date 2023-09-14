@@ -8,23 +8,23 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	watchtools "k8s.io/client-go/tools/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// XXX rewrite with controller-runtime dynamic client
-
-func logEventsForPod(log *log.Logger, client *kubernetes.Clientset, namespace string, uid types.UID) chan struct{} {
+func logEventsForPod(log *log.Logger, c client.WithWatch, namespace string, uid types.UID) chan struct{} {
 	stop := make(chan struct{})
 	go func() {
-		regardingSelector := "involvedObject.uid=" + string(uid)
-		events := client.CoreV1().Events(namespace)
-		list, err := events.List(context.Background(), metav1.ListOptions{
-			FieldSelector: regardingSelector,
-		})
+		listOptions := client.ListOptions{
+			Namespace:     namespace,
+			FieldSelector: fields.OneTermEqualSelector("involvedObject.uid", string(uid)),
+		}
+		var list corev1.EventList
+		err := c.List(context.Background(), &list, &listOptions)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -36,8 +36,8 @@ func logEventsForPod(log *log.Logger, client *kubernetes.Clientset, namespace st
 			list.ListMeta.ResourceVersion,
 			&cache.ListWatch{
 				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					options.FieldSelector = regardingSelector
-					return events.Watch(context.Background(), options)
+					listOptions.Raw = &options
+					return c.Watch(context.Background(), &list, &listOptions)
 				},
 			},
 		)
@@ -70,23 +70,19 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	name := ctx.Value(ctxId).(string)
 
 	input := string(r.Context().Value(ctxBody).([]byte))
-	spec := h.spec.PodSpec.DeepCopy()
-	spec.Containers[0].Env = append(spec.Containers[0].Env, corev1.EnvVar{
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: h.namespace,
+			Name:      name,
+		},
+		Spec: *h.spec.PodSpec.DeepCopy(),
+	}
+	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "INPUT",
 		Value: input,
 	})
 
-	pods := h.client.CoreV1().Pods(h.namespace)
-	pod, err := pods.Create(
-		context.Background(),
-		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-			Spec: *spec,
-		},
-		metav1.CreateOptions{},
-	)
+	err := h.client.Create(context.Background(), pod)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -99,8 +95,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pod.ObjectMeta.ResourceVersion,
 		&cache.ListWatch{
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				options.FieldSelector = "metadata.name=" + name
-				return pods.Watch(context.Background(), options)
+				var list corev1.PodList
+				return h.client.Watch(context.Background(), &list, &client.ListOptions{
+					Namespace:     h.namespace,
+					FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
+				})
 			},
 		},
 		func(event watch.Event) (bool, error) {
@@ -128,7 +127,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case corev1.PodSucceeded:
 		defer func() {
 			go func() {
-				err = pods.Delete(context.Background(), name, metav1.DeleteOptions{})
+				err = h.client.Delete(context.Background(), pod)
 				if err != nil {
 					log.Panic(err)
 				}
@@ -138,6 +137,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(int(pod.Status.ContainerStatuses[0].State.Terminated.ExitCode) + 399)
 	}
 
+	// XXX dynamic client supports only structured subresources
+	pods := h.oldClient.CoreV1().Pods(h.namespace)
 	reader, err := pods.GetLogs(name, &corev1.PodLogOptions{}).Stream(context.Background())
 	if err != nil {
 		log.Panic(err)

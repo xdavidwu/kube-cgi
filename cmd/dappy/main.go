@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	oldClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func main() {
 	clientgoscheme.AddToScheme(scheme)
 	fluorescencev1alpha1.AddToScheme(scheme)
 
-	dynamicClient, err := client.New(config, client.Options{Scheme: scheme})
+	dynamicClient, err := client.NewWithWatch(config, client.Options{Scheme: scheme})
 	if err != nil {
 		panic(err)
 	}
@@ -56,10 +56,13 @@ func main() {
 		&client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: apiSetVersion}},
 	)
 
+	// XXX WithWatch cannot be mixed with NewNamespacedClient yet
+
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
 		mux.Handle(apiSet.Spec.APIs[i].Path, withMiddlewares(&handler{
-			client:    clientset,
+			client:    dynamicClient,
+			oldClient: oldClient,
 			spec:      &apiSet.Spec.APIs[i],
 			namespace: namespace,
 		}))
