@@ -165,7 +165,22 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		},
 	}
 
-	pathTypePrefix := networkingv1.PathTypePrefix
+	pathTypeExact := networkingv1.PathTypeExact
+	paths := make([]networkingv1.HTTPIngressPath, len(apiSet.Spec.APIs))
+	for i := range apiSet.Spec.APIs {
+		paths[i] = networkingv1.HTTPIngressPath{
+			Path:     apiSet.Spec.APIs[i].Path,
+			PathType: &pathTypeExact,
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: req.Name,
+					Port: networkingv1.ServiceBackendPort{
+						Number: 80,
+					},
+				},
+			},
+		}
+	}
 	ingress := networkingv1.Ingress{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: networkingv1.SchemeGroupVersion.String(),
@@ -181,21 +196,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 					Host: apiSet.Spec.Host,
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								// XXX only those in spec
-								{
-									Path:     "/",
-									PathType: &pathTypePrefix,
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: req.Name,
-											Port: networkingv1.ServiceBackendPort{
-												Number: 80,
-											},
-										},
-									},
-								},
-							},
+							Paths: paths,
 						},
 					},
 				},
