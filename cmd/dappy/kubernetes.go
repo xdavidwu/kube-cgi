@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,12 +64,23 @@ func logEventsForPod(log *log.Logger, c client.WithWatch, namespace string, uid 
 	return stop
 }
 
+func sanitize(i rune) rune {
+	if (i >= 'a' && i <= 'z') || (i >= '0' && i <= '9') {
+		return i
+	}
+	return '-'
+}
+
+func namify(i string) string {
+	return strings.TrimLeft(strings.Map(sanitize, strings.ToLower(i)), "-")
+}
+
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(ctxLogger).(*log.Logger)
 	log.Printf("requested %s", r.RequestURI)
 
-	name := ctx.Value(ctxId).(string)
+	name := fmt.Sprintf("%s-%s", namify(h.spec.Path), ctx.Value(ctxId).(string))
 
 	input := string(r.Context().Value(ctxBody).([]byte))
 	pod := &corev1.Pod{
