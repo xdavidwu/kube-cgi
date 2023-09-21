@@ -66,6 +66,7 @@ func main() {
 			oldClient: oldClient,
 			spec:      &apiSet.Spec.APIs[i],
 			namespace: namespace,
+			apiSet:    &apiSet,
 		}))
 	}
 	server := &http.Server{Handler: mux}

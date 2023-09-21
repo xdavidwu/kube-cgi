@@ -18,6 +18,7 @@ type handler struct {
 	oldClient *kubernetes.Clientset
 	namespace string
 	spec      *fluorescencev1alpha1.API
+	apiSet    *fluorescencev1alpha1.APISet
 }
 
 type ErrorResponse struct {

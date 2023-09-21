@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -102,8 +103,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:  "INPUT",
 		Value: input,
 	})
+	err := controllerutil.SetControllerReference(h.apiSet, pod, h.client.Scheme())
+	if err != nil {
+		log.Panic(err)
+	}
 
-	err := h.client.Create(context.Background(), pod)
+	err = h.client.Create(context.Background(), pod)
 	if err != nil {
 		log.Panic(err)
 	}
