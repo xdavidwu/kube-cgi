@@ -6,10 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/google/uuid"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
@@ -59,7 +58,7 @@ func setContentType(next http.Handler, contentType string) http.Handler {
 
 func logsWithIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id, _, _ := strings.Cut(uuid.NewString(), "-")
+		id := rand.String(5)
 		ctx := context.WithValue(r.Context(), ctxId, id)
 		parent := log.Default()
 		logger := log.New(
