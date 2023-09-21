@@ -158,7 +158,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			Ports: []corev1.ServicePort{
 				{
 					Port:       80,
-					TargetPort: intstr.FromInt(1234),
+					TargetPort: intstr.FromInt(internal.DAPIPort),
 				},
 			},
 			Selector: labels,
