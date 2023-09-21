@@ -18,6 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	managedByKey = "app.kubernetes.io/managed-by"
+	manager      = "dappy"
+)
+
 func logEventsForPod(log *log.Logger, c client.WithWatch, namespace string, uid types.UID) chan struct{} {
 	stop := make(chan struct{})
 	go func() {
@@ -87,6 +92,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.namespace,
 			Name:      name,
+			Labels: map[string]string{
+				managedByKey: manager,
+			},
 		},
 		Spec: *h.spec.PodSpec.DeepCopy(),
 	}
