@@ -236,6 +236,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		resources = append(resources, resource{secret, &apiSet.Status.ImagePullSecret})
 	}
 
+	apiSet.Status.ObservedGeneration = apiSet.ObjectMeta.Generation
 	defer func() {
 		err2 := r.Status().Update(ctx, &apiSet)
 		if err2 != nil {

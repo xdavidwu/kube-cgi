@@ -92,6 +92,8 @@ type APISetStatus struct {
 	Ingress         *corev1.ObjectReference `json:"ingress,omitempty"`
 	ImagePullSecret *corev1.ObjectReference `json:"imagePullSecret,omitempty"`
 	Deployed        *bool                   `json:"deployed,omitempty"`
+
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 //+kubebuilder:object:root=true

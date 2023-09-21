@@ -6934,6 +6934,9 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              observedGeneration:
+                format: int64
+                type: integer
               roleBinding:
                 description: ObjectReference contains enough information to let you
                   inspect or modify the referred object. --- New uses of this type
