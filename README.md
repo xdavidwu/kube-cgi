@@ -1,8 +1,10 @@
 # fluorescence
-// TODO(user): Add simple overview of use/purpose
+
+[WIP] Distributed Container-based Web API Platform
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+Make computationally-heavy web API easy and scalable via handling each requests with containers on Kubernetes. Especially useful when accelerators are desired, which are managed by Kubernetes itself via custom allocatable resources.
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -78,3 +80,4 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 
 ## License
 
+[MIT](LICENSE)
