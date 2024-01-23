@@ -9,6 +9,7 @@ import (
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
@@ -76,8 +77,12 @@ func logsWithIdentifier(next http.Handler) http.Handler {
 func withMiddlewares(handler *handler) http.Handler {
 	var stack http.Handler = handler
 	if handler.spec.Request != nil && handler.spec.Request.Schema != "" {
+		json, err := yaml.ToJSON([]byte(handler.spec.Request.Schema))
+		if err != nil {
+			log.Panicf("cannot convert schema to json: %v", err)
+		}
 		// XXX better name
-		schema := jsonschema.MustCompileString("api.schema.json", handler.spec.Request.Schema)
+		schema := jsonschema.MustCompileString("api.schema.json", string(json))
 		stack = validatesJson(stack, schema)
 	} else {
 		// XXX seperate body draining into another middleware?

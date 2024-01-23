@@ -6,9 +6,9 @@ import (
 )
 
 type Request struct {
-	// JSON Schema to validate requests with
-	// TODO validate this with webhook
-	// TODO consider YAML serialization support a la OpenAPI
+	// JSON Schema to validate requests with, as a string of JSON or YAML
+	// TODO validate this with webhook?
+	// TODO consider custom marshal/unmarshaler to inline this
 	Schema string `json:"schema,omitempty"`
 }
 
