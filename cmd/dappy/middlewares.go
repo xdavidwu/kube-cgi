@@ -76,7 +76,8 @@ func logsWithIdentifier(next http.Handler) http.Handler {
 func withMiddlewares(handler *handler) http.Handler {
 	var stack http.Handler = handler
 	if handler.spec.Request != nil && handler.spec.Request.Schema != nil {
-		stack = validatesJson(stack, handler.spec.Schema.Schema)
+		schema := jsonschema.MustCompileString("api.schema.json", handler.spec.Request.Schema.RawJSON)
+		stack = validatesJson(stack, schema)
 	} else {
 		// XXX seperate body draining into another middleware?
 		stack = validatesJson(stack, nil)

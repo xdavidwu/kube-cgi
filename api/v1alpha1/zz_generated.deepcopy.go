@@ -258,7 +258,8 @@ func (in *Request) DeepCopyInto(out *Request) {
 	*out = *in
 	if in.Schema != nil {
 		in, out := &in.Schema, &out.Schema
-		*out = (*in).DeepCopy()
+		*out = new(Schema)
+		**out = **in
 	}
 }
 
