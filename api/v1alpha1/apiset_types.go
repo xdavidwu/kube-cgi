@@ -1,15 +1,48 @@
 package v1alpha1
 
 import (
+	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +kubebuilder:validation:Type=object
+// +kubebuilder:pruning:PreserveUnknownFields
+// +kubebuilder:object:generate=false
+type Schema struct {
+	*jsonschema.Schema
+	raw string
+}
+
+func (s *Schema) MarshalJSON() ([]byte, error) {
+	return []byte(s.raw), nil
+}
+
+func (s *Schema) UnmarshalJSON(b []byte) error {
+	s.raw = string(b)
+	schema, err := jsonschema.CompileString("api.schema.json", s.raw)
+	s.Schema = schema
+	return err
+}
+
+func (in *Schema) DeepCopyInto(out *Schema) {
+	out.raw = in.raw
+	out.Schema = jsonschema.MustCompileString("api.schema.json", in.raw)
+}
+
+func (in *Schema) DeepCopy() *Schema {
+	if in == nil {
+		return nil
+	}
+	out := new(Schema)
+	in.DeepCopyInto(out)
+	return out
+}
+
 type Request struct {
 	// JSON Schema to validate requests with, as a string of JSON or YAML
 	// TODO validate this with webhook?
-	// TODO consider custom marshal/unmarshaler to inline this
-	Schema string `json:"schema,omitempty"`
+	Schema *Schema `json:"schema,omitempty"`
 }
 
 type Response struct {

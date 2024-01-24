@@ -6751,8 +6751,8 @@ spec:
                         schema:
                           description: JSON Schema to validate requests with, as a
                             string of JSON or YAML TODO validate this with webhook?
-                            TODO consider custom marshal/unmarshaler to inline this
-                          type: string
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                       type: object
                     response:
                       properties:
