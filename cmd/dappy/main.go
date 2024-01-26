@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -26,6 +27,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	promlisten, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIMetricsPort))
+	if err != nil {
+		panic(err)
+	}
+	go http.Serve(promlisten, promhttp.Handler())
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
