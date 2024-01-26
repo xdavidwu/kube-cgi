@@ -45,7 +45,11 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 //+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch
 
-const FieldManager = "fluorescence"
+const (
+	fieldManager = "fluorescence"
+	managedByKey = "app.kubernetes.io/managed-by"
+	manager      = "fluorescence"
+)
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -256,7 +260,14 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, err
 		}
 
-		err = r.Patch(ctx, obj.obj, client.Apply, &client.PatchOptions{Force: &soTrue, FieldManager: FieldManager})
+		labels := obj.obj.GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[managedByKey] = manager
+		obj.obj.SetLabels(labels)
+
+		err = r.Patch(ctx, obj.obj, client.Apply, &client.PatchOptions{Force: &soTrue, FieldManager: fieldManager})
 		if err != nil {
 			log.Error(err, "cannot apply object", "object", obj.obj)
 			return ctrl.Result{}, err
