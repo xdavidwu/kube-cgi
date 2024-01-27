@@ -73,9 +73,10 @@ type DAPI struct {
 
 	// TODO consider what may be customized
 
-	// monitoring.coreos.com/v1 ServiceMonitor support
-	// TODO impl
-	ServiceMonitor *bool `json:"serviceMonitor,omitempty"`
+	// Create monitoring.coreos.com/v1 ServiceMonitor for distributed API
+	// runtime metrics
+	//+kubebuilder:default=false
+	ServiceMonitor bool `json:"serviceMonitor,omitempty"`
 }
 
 // APISetSpec defines the desired state of APISet
@@ -106,6 +107,7 @@ type APISetStatus struct {
 	Service         *corev1.ObjectReference `json:"service,omitempty"`
 	Ingress         *corev1.ObjectReference `json:"ingress,omitempty"`
 	ImagePullSecret *corev1.ObjectReference `json:"imagePullSecret,omitempty"`
+	ServiceMonitor  *corev1.ObjectReference `json:"serviceMonitor,omitempty"`
 	Deployed        *bool                   `json:"deployed,omitempty"`
 
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`

@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -39,6 +40,7 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups="",resources=services,verbs=create;patch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=create;patch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;patch
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=create;patch
 
 // needed by dappy, set on manager to assign related rolebindings
 //+kubebuilder:rbac:groups="",resources=pods,verbs=*
@@ -46,9 +48,12 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch
 
 const (
-	fieldManager = "fluorescence"
-	managedByKey = "app.kubernetes.io/managed-by"
-	manager      = "fluorescence"
+	fieldManager    = "fluorescence"
+	managedByKey    = "app.kubernetes.io/managed-by"
+	manager         = "fluorescence"
+	metricsPortName = "metrics"
+	httpPortName    = "http"
+	apiSetKey       = "fluorescence.aic.cs.nycu.edu.tw/apiset"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -101,7 +106,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		},
 	}
 
-	labels := map[string]string{"fluorescence.aic.cs.nycu.edu.tw/apiset": req.Namespace + "." + req.Name}
+	apiSetLabelValue := req.Namespace + "." + req.Name
 	deployment := appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -113,11 +118,11 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: map[string]string{apiSetKey: apiSetLabelValue},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: map[string]string{apiSetKey: apiSetLabelValue},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -145,7 +150,8 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			},
 		},
 	}
-	if apiSet.Spec.DAPI != nil {
+	// TODO defaulting webhook
+	if apiSet.Spec.DAPI != nil && *apiSet.Spec.DAPI.Replicas != 0 {
 		deployment.Spec.Replicas = apiSet.Spec.DAPI.Replicas
 	}
 
@@ -157,15 +163,21 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
 			Namespace: req.Namespace,
+			Labels:    map[string]string{apiSetKey: apiSetLabelValue},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
+					Name:       httpPortName,
 					Port:       80,
 					TargetPort: intstr.FromInt(internal.DAPIPort),
 				},
+				{
+					Name: metricsPortName,
+					Port: internal.DAPIMetricsPort,
+				},
 			},
-			Selector: labels,
+			Selector: map[string]string{apiSetKey: apiSetLabelValue},
 		},
 	}
 
@@ -221,6 +233,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		{&ingress, &apiSet.Status.Ingress},
 	}
 
+	// XXX
 	if r.PullSecret != nil {
 		secret := r.PullSecret.DeepCopy()
 		secret.TypeMeta = metav1.TypeMeta{
@@ -238,6 +251,29 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 
 		resources = append(resources, resource{secret, &apiSet.Status.ImagePullSecret})
+	}
+
+	if apiSet.Spec.DAPI != nil && apiSet.Spec.DAPI.ServiceMonitor {
+		serviceMonitor := monitoringv1.ServiceMonitor{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: monitoringv1.SchemeGroupVersion.String(),
+				Kind:       "ServiceMonitor",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      req.Name,
+				Namespace: req.Namespace,
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchLabels: map[string]string{apiSetKey: apiSetLabelValue},
+				},
+				Endpoints: []monitoringv1.Endpoint{
+					{Port: metricsPortName},
+				},
+			},
+		}
+
+		resources = append(resources, resource{&serviceMonitor, &apiSet.Status.ServiceMonitor})
 	}
 
 	apiSet.Status.ObservedGeneration = apiSet.ObjectMeta.Generation

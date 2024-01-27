@@ -164,6 +164,11 @@ func (in *APISetStatus) DeepCopyInto(out *APISetStatus) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
+	if in.ServiceMonitor != nil {
+		in, out := &in.ServiceMonitor, &out.ServiceMonitor
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	if in.Deployed != nil {
 		in, out := &in.Deployed, &out.Deployed
 		*out = new(bool)
@@ -187,11 +192,6 @@ func (in *DAPI) DeepCopyInto(out *DAPI) {
 	if in.Replicas != nil {
 		in, out := &in.Replicas, &out.Replicas
 		*out = new(int32)
-		**out = **in
-	}
-	if in.ServiceMonitor != nil {
-		in, out := &in.ServiceMonitor, &out.ServiceMonitor
-		*out = new(bool)
 		**out = **in
 	}
 }
