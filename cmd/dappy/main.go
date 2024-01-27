@@ -24,7 +24,15 @@ import (
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-	prometheus.MustRegister(collectors.NewBuildInfoCollector())
+
+	prometheus := prometheus.NewRegistry()
+	prometheus.MustRegister(
+		collectors.NewBuildInfoCollector(),
+		collectors.NewGoCollector(
+			collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll),
+		),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
 	if err != nil {
@@ -34,7 +42,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	go http.Serve(promlisten, promhttp.Handler())
+	go http.Serve(promlisten, promhttp.InstrumentMetricHandler(
+		prometheus,
+		promhttp.HandlerFor(prometheus, promhttp.HandlerOpts{
+			ErrorLog: log.Default(),
+			Registry: prometheus,
+		}),
+	))
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
