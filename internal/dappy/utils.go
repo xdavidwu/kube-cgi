@@ -1,4 +1,4 @@
-package main
+package dappy
 
 func ExitCodeToHttpStatus(c int) int {
 	switch {

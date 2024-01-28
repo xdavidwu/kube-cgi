@@ -21,6 +21,7 @@ import (
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
 )
 
 func main() {
@@ -85,12 +86,12 @@ func main() {
 
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
-		mux.Handle(apiSet.Spec.APIs[i].Path, withMiddlewares(&handler{
-			client:    dynamicClient,
-			oldClient: oldClient,
-			spec:      &apiSet.Spec.APIs[i],
-			namespace: namespace,
-			apiSet:    &apiSet,
+		mux.Handle(apiSet.Spec.APIs[i].Path, dappy.WithMiddlewares(&dappy.Handler{
+			Client:    dynamicClient,
+			OldClient: oldClient,
+			Spec:      &apiSet.Spec.APIs[i],
+			Namespace: namespace,
+			APISet:    &apiSet,
 		}))
 	}
 

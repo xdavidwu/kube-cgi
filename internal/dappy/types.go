@@ -1,4 +1,4 @@
-package main
+package dappy
 
 import (
 	"k8s.io/client-go/kubernetes"
@@ -13,12 +13,12 @@ const (
 	ctxId     = "id"
 )
 
-type handler struct {
-	client    client.WithWatch
-	oldClient *kubernetes.Clientset
-	namespace string
-	spec      *fluorescencev1alpha1.API
-	apiSet    *fluorescencev1alpha1.APISet
+type Handler struct {
+	Client    client.WithWatch
+	OldClient *kubernetes.Clientset
+	Namespace string
+	Spec      *fluorescencev1alpha1.API
+	APISet    *fluorescencev1alpha1.APISet
 }
 
 type ErrorResponse struct {

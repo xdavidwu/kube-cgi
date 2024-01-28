@@ -1,4 +1,4 @@
-package main
+package dappy
 
 import (
 	"context"
@@ -73,10 +73,10 @@ func logsWithIdentifier(next http.Handler) http.Handler {
 }
 
 // XXX should not really inspect handler config
-func withMiddlewares(handler *handler) http.Handler {
+func WithMiddlewares(handler *Handler) http.Handler {
 	var stack http.Handler = handler
-	if handler.spec.Request != nil && handler.spec.Request.Schema != nil {
-		schema := jsonschema.MustCompileString("api.schema.json", handler.spec.Request.Schema.RawJSON)
+	if handler.Spec.Request != nil && handler.Spec.Request.Schema != nil {
+		schema := jsonschema.MustCompileString("api.schema.json", handler.Spec.Request.Schema.RawJSON)
 		stack = validatesJson(stack, schema)
 	} else {
 		// XXX seperate body draining into another middleware?
@@ -84,8 +84,8 @@ func withMiddlewares(handler *handler) http.Handler {
 	}
 
 	contentType := "application/json"
-	if handler.spec.Response != nil && handler.spec.Response.ContentType != "" {
-		contentType = handler.spec.Response.ContentType
+	if handler.Spec.Response != nil && handler.Spec.Response.ContentType != "" {
+		contentType = handler.Spec.Response.ContentType
 	}
 
 	return logsWithIdentifier(setContentType(stack, contentType))

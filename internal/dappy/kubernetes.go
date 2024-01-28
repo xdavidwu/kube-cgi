@@ -1,4 +1,4 @@
-package main
+package dappy
 
 import (
 	"context"
@@ -81,39 +81,39 @@ func namify(i string) string {
 	return strings.TrimLeft(strings.Map(sanitize, strings.ToLower(i)), "-")
 }
 
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(ctxLogger).(*log.Logger)
 	log.Printf("requested %s", r.RequestURI)
 
-	name := fmt.Sprintf("%s-%s", namify(h.spec.Path), ctx.Value(ctxId).(string))
+	name := fmt.Sprintf("%s-%s", namify(h.Spec.Path), ctx.Value(ctxId).(string))
 
 	input := string(r.Context().Value(ctxBody).([]byte))
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: h.namespace,
+			Namespace: h.Namespace,
 			Name:      name,
 			Labels: map[string]string{
 				managedByKey: manager,
 			},
 		},
-		Spec: *h.spec.PodSpec.DeepCopy(),
+		Spec: *h.Spec.PodSpec.DeepCopy(),
 	}
 	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "INPUT",
 		Value: input,
 	})
-	err := controllerutil.SetControllerReference(h.apiSet, pod, h.client.Scheme())
+	err := controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme())
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = h.client.Create(context.Background(), pod)
+	err = h.Client.Create(context.Background(), pod)
 	if err != nil {
 		log.Panic(err)
 	}
 	log.Printf("dispatched pod %s", name)
-	stop := logEventsForPod(log, h.client, h.namespace, pod.ObjectMeta.UID)
+	stop := logEventsForPod(log, h.Client, h.Namespace, pod.ObjectMeta.UID)
 	defer close(stop)
 
 	lastEvent, err := watchtools.Until(
@@ -122,8 +122,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		&cache.ListWatch{
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				var list corev1.PodList
-				return h.client.Watch(context.Background(), &list, &client.ListOptions{
-					Namespace:     h.namespace,
+				return h.Client.Watch(context.Background(), &list, &client.ListOptions{
+					Namespace:     h.Namespace,
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
 				})
 			},
@@ -153,7 +153,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case corev1.PodSucceeded:
 		defer func() {
 			go func() {
-				err = h.client.Delete(context.Background(), pod)
+				err = h.Client.Delete(context.Background(), pod)
 				if err != nil {
 					log.Panic(err)
 				}
@@ -164,7 +164,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// XXX dynamic client supports only structured subresources
-	pods := h.oldClient.CoreV1().Pods(h.namespace)
+	pods := h.OldClient.CoreV1().Pods(h.Namespace)
 	reader, err := pods.GetLogs(name, &corev1.PodLogOptions{}).Stream(context.Background())
 	if err != nil {
 		log.Panic(err)

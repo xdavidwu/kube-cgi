@@ -69,7 +69,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/manager/main.go
-	go build -o bin/dappy ./cmd/dappy/
+	go build -o bin/dappy cmd/dappy/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
