@@ -42,10 +42,7 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;patch
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=create;patch
 
-// needed by dappy, set on manager to assign related rolebindings
-//+kubebuilder:rbac:groups="",resources=pods,verbs=*
-//+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
-//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch
+// rbac in internal/dappy is also set on manager to be able to bind
 
 const (
 	fieldManager    = "fluorescence"

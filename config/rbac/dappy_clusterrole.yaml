@@ -5,28 +5,28 @@ metadata:
   name: dappy
 rules:
 - apiGroups:
-  - fluorescence.aic.cs.nycu.edu.tw
-  resources:
-  - apisets
-  verbs:
-  - get
-- apiGroups:
-  - ''
-  resources:
-  - pods
-  verbs:
-  - '*'
-- apiGroups:
-  - ''
-  resources:
-  - pods/log
-  verbs:
-  - get
-- apiGroups:
-  - ''
+  - ""
   resources:
   - events
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
+- apiGroups:
+  - fluorescence.aic.cs.nycu.edu.tw
+  resources:
+  - apisets
+  verbs:
+  - get

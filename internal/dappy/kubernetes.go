@@ -19,6 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+//+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
+//+kubebuilder:rbac:groups="",resources=pods,verbs=*
+//+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch
+
 const (
 	managedByKey = "app.kubernetes.io/managed-by"
 	manager      = "dappy"
