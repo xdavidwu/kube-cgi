@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -92,6 +93,8 @@ func main() {
 			apiSet:    &apiSet,
 		}))
 	}
+
+	healthz.InstallReadyzHandler(mux, healthz.PingHealthz)
 	server := &http.Server{Handler: mux}
 	server.Serve(listen)
 }

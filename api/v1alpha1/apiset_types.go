@@ -55,6 +55,7 @@ type HistoryLimit struct {
 
 type API struct {
 	// Path of this API endpoint
+	// /readyz is reserved for internal readiness checks
 	//+kubebuilder:validation:Format=uri
 	Path string `json:"path"`
 
