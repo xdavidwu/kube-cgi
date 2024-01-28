@@ -95,7 +95,17 @@ func main() {
 		}))
 	}
 
-	healthz.InstallReadyzHandler(mux, healthz.PingHealthz)
+	healthz.InstallReadyzHandler(mux, healthz.PingHealthz, healthz.NamedCheck(
+		"apiserver",
+		func(r *http.Request) error {
+			err = oldClient.CoreV1().RESTClient().Get().AbsPath("/readyz").Do(r.Context()).Error()
+			if err != nil {
+				log.Printf("cannot reach apiserver: %v", err)
+			}
+			return err
+		},
+	))
+
 	server := &http.Server{Handler: mux}
 	server.Serve(listen)
 }
