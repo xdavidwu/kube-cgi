@@ -160,7 +160,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}()
 		}()
 	case corev1.PodFailed:
-		w.WriteHeader(int(pod.Status.ContainerStatuses[0].State.Terminated.ExitCode) + 399)
+		w.WriteHeader(ExitCodeToHttpStatus(int(pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)))
 	}
 
 	// XXX dynamic client supports only structured subresources
