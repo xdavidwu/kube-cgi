@@ -140,6 +140,14 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 									Value: apiSet.ObjectMeta.ResourceVersion,
 								},
 							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/readyz",
+										Port: intstr.FromInt(internal.DAPIPort),
+									},
+								},
+							},
 						},
 					},
 					ServiceAccountName: req.Name,
