@@ -119,6 +119,10 @@ func WithMiddlewares(handler *Handler) http.Handler {
 		contentType = handler.Spec.Response.ContentType
 	}
 
+	prepopulateLabels := prometheus.Labels{"handler": handler.Spec.Path, "code": "200"}
+	httpRequests.With(prepopulateLabels)
+	httpRequestsDuration.With(prepopulateLabels)
+
 	labels := prometheus.Labels{"handler": handler.Spec.Path}
 	return promhttp.InstrumentHandlerCounter(
 		httpRequests.MustCurryWith(labels),
