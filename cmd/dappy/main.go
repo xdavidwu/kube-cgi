@@ -35,6 +35,7 @@ func main() {
 		),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
+	dappy.MustRegisterCollectors(prometheus)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
 	if err != nil {
