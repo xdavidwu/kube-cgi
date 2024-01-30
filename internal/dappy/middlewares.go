@@ -44,13 +44,6 @@ func MustRegisterCollectors(r *prometheus.Registry) {
 
 func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Body == nil {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			msg := ErrorResponse{Message: "request body is absent"}
-			body, _ := json.Marshal(msg)
-			w.Write(body)
-			return
-		}
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log := r.Context().Value(ctxLogger).(*log.Logger)
