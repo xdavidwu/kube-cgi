@@ -2,33 +2,27 @@ stages:
   - package
   - deploy
 
-.package:
+.ko:
   stage: package
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
+  image: alpine:edge
+  variables:
+    KO_DOCKER_REPO: $CI_REGISTRY_IMAGE
   before_script:
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
+    - apk add ko go
+    - ko login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
   script:
-    - |
-      /kaniko/executor --context $CI_PROJECT_DIR \
-        -f $CI_PROJECT_DIR/$CONTAINERFILE \
-        --build-arg IMAGE_TAG=$CI_PIPELINE_ID \
-        --destination $CI_REGISTRY_IMAGE/$IMAGE:$CI_PIPELINE_ID
-  after_script:
-    - rm /kaniko/.docker/config.json
+    - ko build -B -t $CI_PIPELINE_ID $IMPORT_PATH
 
 package:manager:
-  extends: .package
+  extends: .ko
   variables:
-    CONTAINERFILE: Containerfile-manager
-    IMAGE: manager
+    IMPORT_PATH: ./cmd/manager
 
 package:dappy:
-  extends: .package
+  extends: .ko
   variables:
-    CONTAINERFILE: Containerfile-dappy
-    IMAGE: dappy
+    IMPORT_PATH: ./cmd/dappy
 
 deploy:
   stage: deploy
