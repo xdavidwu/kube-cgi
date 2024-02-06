@@ -35,7 +35,7 @@ func cgiLikeEnvVars(r *http.Request) map[string]string {
 
 	res["QUERY_STRING"] = r.URL.RawQuery
 
-	addr, _, err := net.SplitHostPort(r.RemoteAddr)
+	addr, port, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		panic(err)
 	}
@@ -50,8 +50,9 @@ func cgiLikeEnvVars(r *http.Request) map[string]string {
 		res["HTTP_"+strings.ReplaceAll(strings.ToUpper(k), "-", "_")] = strings.Join(vs, ", ")
 	}
 
-	// net/http/cgi has this
+	// net/http/cgi has these
 	res["REQUEST_URI"] = r.URL.RequestURI()
+	res["REMOTE_PORT"] = port
 
 	return res
 }
