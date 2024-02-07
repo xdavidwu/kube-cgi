@@ -60,7 +60,9 @@ type API struct {
 	Path string `json:"path"`
 
 	// Spec of the pod,
-	// only one container expected, restartPolicy should be Never
+	// Only one container expected, restartPolicy should be Never.
+	// If stdin of the container is true, stdinOnce should also be true,
+	// where request body will also be sent to stdin.
 	corev1.PodSpec `json:"podSpec"`
 
 	*Request  `json:"request,omitempty"`

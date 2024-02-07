@@ -44,8 +44,10 @@ spec:
                       format: uri
                       type: string
                     podSpec:
-                      description: Spec of the pod, only one container expected, restartPolicy
-                        should be Never
+                      description: Spec of the pod, Only one container expected, restartPolicy
+                        should be Never. If stdin of the container is true, stdinOnce
+                        should also be true, where request body will also be sent
+                        to stdin.
                       properties:
                         activeDeadlineSeconds:
                           description: Optional duration in seconds the pod may be

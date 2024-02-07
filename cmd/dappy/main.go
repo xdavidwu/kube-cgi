@@ -88,11 +88,12 @@ func main() {
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
 		mux.Handle(apiSet.Spec.APIs[i].Path, dappy.WithMiddlewares(&dappy.Handler{
-			Client:    dynamicClient,
-			OldClient: oldClient,
-			Spec:      &apiSet.Spec.APIs[i],
-			Namespace: namespace,
-			APISet:    &apiSet,
+			Client:       dynamicClient,
+			OldClient:    oldClient,
+			ClientConfig: config,
+			Spec:         &apiSet.Spec.APIs[i],
+			Namespace:    namespace,
+			APISet:       &apiSet,
 		}))
 	}
 

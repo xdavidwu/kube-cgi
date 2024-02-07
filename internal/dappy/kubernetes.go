@@ -13,7 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/remotecommand"
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -24,6 +26,7 @@ import (
 //+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
 //+kubebuilder:rbac:groups="",resources=pods,verbs=*
 //+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
+//+kubebuilder:rbac:groups="",resources=pods/attach,verbs=create
 //+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch
 
 const (
@@ -95,7 +98,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	name := fmt.Sprintf("%s-%s", namify(h.Spec.Path), ctx.Value(ctxId).(string))
 
-	input := string(r.Context().Value(ctxBody).([]byte))
+	input := string(ctx.Value(ctxBody).([]byte))
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.Namespace,
@@ -129,38 +132,105 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stop := logEventsForPod(log, h.Client, h.Namespace, pod.ObjectMeta.UID)
 	defer close(stop)
 
-	lastEvent, err := watchtools.Until(
-		context.Background(),
-		pod.ObjectMeta.ResourceVersion,
-		&cache.ListWatch{
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				var list corev1.PodList
-				return h.Client.Watch(context.Background(), &list, &client.ListOptions{
-					Namespace:     h.Namespace,
-					FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
-				})
+	if pod.Spec.Containers[0].Stdin {
+		lastEvent, err := watchtools.Until(
+			ctx,
+			pod.ObjectMeta.ResourceVersion,
+			&cache.ListWatch{
+				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+					var list corev1.PodList
+					return h.Client.Watch(context.Background(), &list, &client.ListOptions{
+						Namespace:     h.Namespace,
+						FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
+					})
+				},
 			},
-		},
-		func(event watch.Event) (bool, error) {
-			if event.Type == watch.Deleted {
-				log.Panic("pod deleted while still waiting")
-			}
-			if event.Type != watch.Added && event.Type != watch.Modified {
+			func(event watch.Event) (bool, error) {
+				if event.Type == watch.Deleted {
+					log.Panic("pod deleted while still waiting")
+				}
+				if event.Type != watch.Added && event.Type != watch.Modified {
+					return false, nil
+				}
+				pod := event.Object.(*corev1.Pod)
+				if pod.Status.Phase == corev1.PodRunning {
+					return true, nil
+				}
+				if pod.Status.Phase == corev1.PodSucceeded ||
+					pod.Status.Phase == corev1.PodFailed {
+					return true, nil
+				}
 				return false, nil
+			},
+		)
+		if err != nil {
+			log.Panic(err)
+		}
+		pod = lastEvent.Object.(*corev1.Pod)
+
+		if pod.Status.Phase == corev1.PodRunning {
+			url := h.OldClient.CoreV1().RESTClient().Post().
+				Namespace(h.Namespace).Resource("pods").
+				Name(name).SubResource("attach").
+				VersionedParams(&corev1.PodAttachOptions{
+					Stdin:  true,
+					Stdout: false,
+					Stderr: false,
+					TTY:    false,
+				}, scheme.ParameterCodec).URL()
+			attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
+			// does not really fire request yet, nothing should happen
+			if err != nil {
+				log.Panic(err)
 			}
-			pod := event.Object.(*corev1.Pod)
-			if pod.Status.Phase == corev1.PodSucceeded ||
-				pod.Status.Phase == corev1.PodFailed {
-				return true, nil
+			log.Printf("streaming input to pod")
+			err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
+				Stdin:  strings.NewReader(input),
+				Stdout: nil,
+				Stderr: nil,
+				Tty:    false,
+			})
+			if err != nil {
+				log.Printf("streaming input: %v", err)
 			}
-			return false, nil
-		},
-	)
-	if err != nil {
-		log.Panic(err)
+		}
 	}
 
-	pod = lastEvent.Object.(*corev1.Pod)
+	if pod.Status.Phase != corev1.PodSucceeded &&
+		pod.Status.Phase != corev1.PodFailed {
+		lastEvent, err := watchtools.Until(
+			ctx,
+			pod.ObjectMeta.ResourceVersion,
+			&cache.ListWatch{
+				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+					var list corev1.PodList
+					return h.Client.Watch(context.Background(), &list, &client.ListOptions{
+						Namespace:     h.Namespace,
+						FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
+					})
+				},
+			},
+			func(event watch.Event) (bool, error) {
+				if event.Type == watch.Deleted {
+					log.Panic("pod deleted while still waiting")
+				}
+				if event.Type != watch.Added && event.Type != watch.Modified {
+					return false, nil
+				}
+				pod := event.Object.(*corev1.Pod)
+				if pod.Status.Phase == corev1.PodSucceeded ||
+					pod.Status.Phase == corev1.PodFailed {
+					return true, nil
+				}
+				return false, nil
+			},
+		)
+		if err != nil {
+			log.Panic(err)
+		}
+		pod = lastEvent.Object.(*corev1.Pod)
+	}
+
 	log.Printf("pod terminated with phase %s", pod.Status.Phase)
 	switch pod.Status.Phase {
 	case corev1.PodSucceeded:
@@ -178,7 +248,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// XXX dynamic client supports only structured subresources
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
-	reader, err := pods.GetLogs(name, &corev1.PodLogOptions{}).Stream(context.Background())
+	reader, err := pods.GetLogs(name, &corev1.PodLogOptions{}).Stream(ctx)
 	if err != nil {
 		log.Panic(err)
 	}
