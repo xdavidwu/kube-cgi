@@ -9,7 +9,7 @@ import (
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
 )
 
-func TestGoCompatibility(t *testing.T) {
+func TestRequestGoCompatibility(t *testing.T) {
 	r := httptest.NewRequest("GET", "http://example.com/0xdead/beef", strings.NewReader("1337"))
 	r.Header.Set("Host", r.Host)
 	r.Header.Set("X-Clacks-Overhead", "GNU Terry Pratchett")
