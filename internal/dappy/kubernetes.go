@@ -17,6 +17,8 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
 )
 
 //+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
@@ -108,7 +110,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:  "INPUT",
 		Value: input,
 	})
-	for k, v := range cgiLikeEnvVars(r) {
+	for k, v := range cgi.VarsFromRequest(r) {
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  k,
 			Value: v,
