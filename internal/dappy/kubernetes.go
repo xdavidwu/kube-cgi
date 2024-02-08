@@ -48,15 +48,19 @@ func watcherWithOpts(
 
 func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, uid types.UID) {
 	log := loggerFromContext(ctx)
+	must := func(err error) {
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+
 	listOptions := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingFields{"involvedObject.uid": string(uid)},
 	}
+
 	var list corev1.EventList
-	err := c.List(context.Background(), &list, listOptions...)
-	if err != nil {
-		log.Panic(err)
-	}
+	must(c.List(context.Background(), &list, listOptions...))
 	for _, event := range list.Items {
 		log.Println(event.Message)
 	}
@@ -65,9 +69,7 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 		list.ListMeta.ResourceVersion,
 		watcherWithOpts(c, &list, listOptions...),
 	)
-	if err != nil {
-		log.Panic(err)
-	}
+	must(err)
 
 	results := watcher.ResultChan()
 	for {
@@ -105,6 +107,11 @@ type kHandler KubernetesHandler
 func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := loggerFromContext(ctx)
+	must := func(err error) {
+		if err != nil {
+			log.Panic(err)
+		}
+	}
 	log.Printf("requested %s", r.RequestURI)
 
 	name := namify(h.Spec.Path) + "-" + idFromContext(ctx)
@@ -130,12 +137,9 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:  "INPUT",
 		Value: escapeKubernetesExpansion(string(input)),
 	})
-	err := controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme())
-	if err != nil {
-		log.Panic(err)
-	}
+	must(controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme()))
 
-	err = h.Client.Create(context.Background(), pod)
+	err := h.Client.Create(context.Background(), pod)
 	if err != nil && errors.IsRequestEntityTooLargeError(err) {
 		if !pod.Spec.Containers[0].Stdin {
 			log.Printf("pod spec too large but script does not accept stdin, rejecting request: %v", err)
@@ -147,9 +151,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pod.Spec.Containers[0].Env = pod.Spec.Containers[0].Env[:len(pod.Spec.Containers[0].Env)-1]
 		err = h.Client.Create(context.Background(), pod)
 	}
-	if err != nil {
-		log.Panic(err)
-	}
+	must(err)
 
 	log.Printf("dispatched pod %s", name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
@@ -182,9 +184,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return false, nil
 			},
 		)
-		if err != nil {
-			log.Panic(err)
-		}
+		must(err)
 		pod = lastEvent.Object.(*corev1.Pod)
 
 		if pod.Status.Phase == corev1.PodRunning {
@@ -199,9 +199,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}, scheme.ParameterCodec).URL()
 			attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
 			// does not really fire request yet, nothing should happen
-			if err != nil {
-				log.Panic(err)
-			}
+			must(err)
 			log.Printf("streaming input to pod")
 			err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
 				Stdin:  bytes.NewReader(input),
@@ -236,9 +234,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return false, nil
 			},
 		)
-		if err != nil {
-			log.Panic(err)
-		}
+		must(err)
 		pod = lastEvent.Object.(*corev1.Pod)
 	}
 
@@ -247,10 +243,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case corev1.PodSucceeded:
 		defer func() {
 			go func() {
-				err = h.Client.Delete(context.Background(), pod)
-				if err != nil {
-					log.Panic(err)
-				}
+				must(h.Client.Delete(context.Background(), pod))
 			}()
 		}()
 	}
@@ -258,9 +251,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// XXX dynamic client supports only structured subresources
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
 	reader, err := pods.GetLogs(name, &corev1.PodLogOptions{}).Stream(ctx)
-	if err != nil {
-		log.Panic(err)
-	}
+	must(err)
 	defer reader.Close()
 	redir, err := cgi.WriteResponse(w, reader)
 	if redir != "" {
