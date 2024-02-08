@@ -54,7 +54,7 @@ func drainBody(next http.Handler) http.Handler {
 	})
 }
 
-func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
+func validateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes := bodyFromContext(r.Context())
 		var v interface{}
@@ -77,7 +77,7 @@ func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handle
 	})
 }
 
-func logsWithIdentifier(next http.Handler) http.Handler {
+func logWithIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := rand.String(5)
 		ctx := context.WithValue(r.Context(), ctxId, id)
@@ -93,27 +93,19 @@ func logsWithIdentifier(next http.Handler) http.Handler {
 	})
 }
 
-// XXX should not really inspect handler config
-func WithMiddlewares(handler *Handler) http.Handler {
-	var stack http.Handler = handler
-	if handler.Spec.Request != nil && handler.Spec.Request.Schema != nil {
-		schema := jsonschema.MustCompileString("api.schema.json", handler.Spec.Request.Schema.RawJSON)
-		stack = validatesJson(stack, schema)
-	}
-	stack = drainBody(stack)
-
-	prepopulateLabels := prometheus.Labels{"handler": handler.Spec.Path, "code": "200"}
+func intrument(next http.Handler, name string) http.Handler {
+	prepopulateLabels := prometheus.Labels{"handler": name, "code": "200"}
 	httpRequests.With(prepopulateLabels)
 	httpRequestsDuration.With(prepopulateLabels)
 
-	labels := prometheus.Labels{"handler": handler.Spec.Path}
+	labels := prometheus.Labels{"handler": name}
 	return promhttp.InstrumentHandlerCounter(
 		httpRequests.MustCurryWith(labels),
 		promhttp.InstrumentHandlerDuration(
 			httpRequestsDuration.MustCurryWith(labels),
 			promhttp.InstrumentHandlerInFlight(
 				httpInflightRequests.With(labels),
-				logsWithIdentifier(stack),
+				next,
 			),
 		),
 	)

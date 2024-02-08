@@ -31,7 +31,7 @@ func bodyFromContext(ctx context.Context) []byte {
 	return ctx.Value(ctxBody).([]byte)
 }
 
-type Handler struct {
+type KubernetesHandler struct {
 	Client       client.WithWatch
 	OldClient    *kubernetes.Clientset
 	ClientConfig *rest.Config

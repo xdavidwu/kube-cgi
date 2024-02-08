@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,7 +93,9 @@ func escapeKubernetesExpansion(i string) string {
 	return strings.ReplaceAll(i, "$", "$$")
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+type kHandler KubernetesHandler
+
+func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := loggerFromContext(ctx)
 	log.Printf("requested %s", r.RequestURI)
@@ -271,4 +274,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Print(err)
 	}
+}
+
+func (h KubernetesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var stack http.Handler = kHandler(h)
+	if h.Spec.Request != nil && h.Spec.Request.Schema != nil {
+		schema := jsonschema.MustCompileString("api.schema.json", h.Spec.Request.Schema.RawJSON)
+		stack = validateJson(stack, schema)
+	}
+	stack = intrument(logWithIdentifier(drainBody(stack)), h.Spec.Path)
+	stack.ServeHTTP(w, r)
 }
