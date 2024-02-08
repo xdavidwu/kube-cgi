@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -113,25 +114,37 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 		Spec: *h.Spec.PodSpec.DeepCopy(),
 	}
-	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  "INPUT",
-		Value: escapeKubernetesExpansion(input),
-	})
 	for k, v := range cgi.VarsFromRequest(r) {
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  k,
 			Value: escapeKubernetesExpansion(v),
 		})
 	}
+	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "INPUT",
+		Value: escapeKubernetesExpansion(input),
+	})
 	err := controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme())
 	if err != nil {
 		log.Panic(err)
 	}
 
 	err = h.Client.Create(context.Background(), pod)
+	if err != nil && errors.IsRequestEntityTooLargeError(err) {
+		if !pod.Spec.Containers[0].Stdin {
+			log.Printf("pod spec too large but script does not accept stdin, rejecting request: %v", err)
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		log.Printf("pod spec too large, falling back to stdin only for request body: %v", err)
+		pod.Spec.Containers[0].Env = pod.Spec.Containers[0].Env[:len(pod.Spec.Containers[0].Env)-1]
+		err = h.Client.Create(context.Background(), pod)
+	}
 	if err != nil {
 		log.Panic(err)
 	}
+
 	log.Printf("dispatched pod %s", name)
 	stop := logEventsForPod(log, h.Client, h.Namespace, pod.ObjectMeta.UID)
 	defer close(stop)
