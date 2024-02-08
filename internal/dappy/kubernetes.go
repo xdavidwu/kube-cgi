@@ -1,9 +1,8 @@
 package dappy
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -34,7 +33,8 @@ const (
 	manager      = "dappy"
 )
 
-func logEventsForPod(ctx context.Context, log *log.Logger, c client.WithWatch, namespace string, uid types.UID) {
+func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, uid types.UID) {
+	log := loggerFromContext(ctx)
 	listOptions := client.ListOptions{
 		Namespace:     namespace,
 		FieldSelector: fields.OneTermEqualSelector("involvedObject.uid", string(uid)),
@@ -94,12 +94,12 @@ func escapeKubernetesExpansion(i string) string {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	log := ctx.Value(ctxLogger).(*log.Logger)
+	log := loggerFromContext(ctx)
 	log.Printf("requested %s", r.RequestURI)
 
-	name := fmt.Sprintf("%s-%s", namify(h.Spec.Path), ctx.Value(ctxId).(string))
+	name := namify(h.Spec.Path) + "-" + idFromContext(ctx)
 
-	input := string(ctx.Value(ctxBody).([]byte))
+	input := bodyFromContext(ctx)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.Namespace,
@@ -118,7 +118,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "INPUT",
-		Value: escapeKubernetesExpansion(input),
+		Value: escapeKubernetesExpansion(string(input)),
 	})
 	err := controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme())
 	if err != nil {
@@ -142,7 +142,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("dispatched pod %s", name)
-	go logEventsForPod(ctx, log, h.Client, h.Namespace, pod.ObjectMeta.UID)
+	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
 
 	if pod.Spec.Containers[0].Stdin {
 		lastEvent, err := watchtools.Until(
@@ -197,7 +197,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Printf("streaming input to pod")
 			err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
-				Stdin:  strings.NewReader(input),
+				Stdin:  bytes.NewReader(input),
 				Stdout: nil,
 				Stderr: nil,
 				Tty:    false,

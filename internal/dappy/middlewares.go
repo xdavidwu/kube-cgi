@@ -46,8 +46,7 @@ func drainBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			log := r.Context().Value(ctxLogger).(*log.Logger)
-			log.Panic(err)
+			loggerFromContext(r.Context()).Panic(err)
 		}
 
 		next.ServeHTTP(w, r.WithContext(context.WithValue(
@@ -57,7 +56,7 @@ func drainBody(next http.Handler) http.Handler {
 
 func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes := r.Context().Value(ctxBody).([]byte)
+		bytes := bodyFromContext(r.Context())
 		var v interface{}
 		if json.Unmarshal(bytes, &v) != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
