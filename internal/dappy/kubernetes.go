@@ -3,7 +3,6 @@ package dappy
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -242,8 +241,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}()
 		}()
-	case corev1.PodFailed:
-		w.WriteHeader(ExitCodeToHttpStatus(int(pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)))
 	}
 
 	// XXX dynamic client supports only structured subresources
@@ -253,8 +250,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 	}
 	defer reader.Close()
-	_, err = io.Copy(w, reader)
+	redir, err := cgi.WriteResponse(w, reader)
+	if redir != "" {
+		log.Panic("interal redirects not implemented")
+	}
 	if err != nil {
-		log.Panic(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Print(err)
 	}
 }
