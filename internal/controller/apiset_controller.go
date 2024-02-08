@@ -292,8 +292,6 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}()
 
-	// XXX?
-	soTrue := true
 	for _, obj := range resources {
 		err = ctrl.SetControllerReference(&apiSet, obj.obj, r.Scheme)
 		if err != nil {
@@ -308,7 +306,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		labels[managedByKey] = manager
 		obj.obj.SetLabels(labels)
 
-		err = r.Patch(ctx, obj.obj, client.Apply, &client.PatchOptions{Force: &soTrue, FieldManager: fieldManager})
+		err = r.Patch(ctx, obj.obj, client.Apply, client.ForceOwnership, client.FieldOwner(fieldManager))
 		if err != nil {
 			log.Error(err, "cannot apply object", "object", obj.obj)
 			return ctrl.Result{}, err
@@ -321,6 +319,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
+	soTrue := true
 	apiSet.Status.Deployed = &soTrue
 	return ctrl.Result{}, err
 }

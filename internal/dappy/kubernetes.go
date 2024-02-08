@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -34,14 +33,27 @@ const (
 	manager      = "dappy"
 )
 
+func watcherWithOpts(
+	c client.WithWatch,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) cache.Watcher {
+	return &cache.ListWatch{
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			merged := append(opts, &client.ListOptions{Raw: &options})
+			return c.Watch(context.Background(), list, merged...)
+		},
+	}
+}
+
 func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, uid types.UID) {
 	log := loggerFromContext(ctx)
-	listOptions := client.ListOptions{
-		Namespace:     namespace,
-		FieldSelector: fields.OneTermEqualSelector("involvedObject.uid", string(uid)),
+	listOptions := []client.ListOption{
+		client.InNamespace(namespace),
+		client.MatchingFields{"involvedObject.uid": string(uid)},
 	}
 	var list corev1.EventList
-	err := c.List(context.Background(), &list, &listOptions)
+	err := c.List(context.Background(), &list, listOptions...)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -51,12 +63,7 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 
 	watcher, err := watchtools.NewRetryWatcher(
 		list.ListMeta.ResourceVersion,
-		&cache.ListWatch{
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				listOptions.Raw = &options
-				return c.Watch(context.Background(), &list, &listOptions)
-			},
-		},
+		watcherWithOpts(c, &list, listOptions...),
 	)
 	if err != nil {
 		log.Panic(err)
@@ -147,19 +154,16 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("dispatched pod %s", name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
 
+	var list corev1.PodList
+	watchOptions := []client.ListOption{
+		client.InNamespace(h.Namespace),
+		client.MatchingFields{"metadata.uid": string(pod.ObjectMeta.UID)},
+	}
 	if pod.Spec.Containers[0].Stdin {
 		lastEvent, err := watchtools.Until(
 			ctx,
 			pod.ObjectMeta.ResourceVersion,
-			&cache.ListWatch{
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					var list corev1.PodList
-					return h.Client.Watch(context.Background(), &list, &client.ListOptions{
-						Namespace:     h.Namespace,
-						FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
-					})
-				},
-			},
+			watcherWithOpts(h.Client, &list, watchOptions...),
 			func(event watch.Event) (bool, error) {
 				if event.Type == watch.Deleted {
 					log.Panic("pod deleted while still waiting")
@@ -216,15 +220,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		lastEvent, err := watchtools.Until(
 			ctx,
 			pod.ObjectMeta.ResourceVersion,
-			&cache.ListWatch{
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					var list corev1.PodList
-					return h.Client.Watch(context.Background(), &list, &client.ListOptions{
-						Namespace:     h.Namespace,
-						FieldSelector: fields.OneTermEqualSelector("metadata.name", name),
-					})
-				},
-			},
+			watcherWithOpts(h.Client, &list, watchOptions...),
 			func(event watch.Event) (bool, error) {
 				if event.Type == watch.Deleted {
 					log.Panic("pod deleted while still waiting")
