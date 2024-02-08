@@ -90,6 +90,11 @@ func namify(i string) string {
 	return strings.TrimLeft(strings.Map(sanitize, strings.ToLower(i)), "-")
 }
 
+// k8s.io/kubernetes/third_party/forked/golang/expansion
+func escapeKubernetesExpansion(i string) string {
+	return strings.ReplaceAll(i, "$", "$$")
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(ctxLogger).(*log.Logger)
@@ -110,12 +115,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "INPUT",
-		Value: input,
+		Value: escapeKubernetesExpansion(input),
 	})
 	for k, v := range cgi.VarsFromRequest(r) {
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  k,
-			Value: v,
+			Value: escapeKubernetesExpansion(v),
 		})
 	}
 	err := controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme())
