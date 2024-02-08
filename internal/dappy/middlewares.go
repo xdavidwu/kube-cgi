@@ -72,14 +72,6 @@ func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handle
 	})
 }
 
-func setContentType(next http.Handler, contentType string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("content-type", contentType)
-
-		next.ServeHTTP(w, r)
-	})
-}
-
 func logsWithIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := rand.String(5)
@@ -107,11 +99,6 @@ func WithMiddlewares(handler *Handler) http.Handler {
 		stack = validatesJson(stack, nil)
 	}
 
-	contentType := "application/json"
-	if handler.Spec.Response != nil && handler.Spec.Response.ContentType != "" {
-		contentType = handler.Spec.Response.ContentType
-	}
-
 	prepopulateLabels := prometheus.Labels{"handler": handler.Spec.Path, "code": "200"}
 	httpRequests.With(prepopulateLabels)
 	httpRequestsDuration.With(prepopulateLabels)
@@ -123,7 +110,7 @@ func WithMiddlewares(handler *Handler) http.Handler {
 			httpRequestsDuration.MustCurryWith(labels),
 			promhttp.InstrumentHandlerInFlight(
 				httpInflightRequests.With(labels),
-				logsWithIdentifier(setContentType(stack, contentType)),
+				logsWithIdentifier(stack),
 			),
 		),
 	)

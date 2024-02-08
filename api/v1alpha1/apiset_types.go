@@ -28,9 +28,8 @@ type Request struct {
 }
 
 type Response struct {
-	// Content-Type to fill for responses
-	//+kubebuilder:default=application/json
-	ContentType string `json:"contentType,omitempty"`
+	// TODO define CGI script failure behavior
+	// TODO also consider making this setable per-apiset
 }
 
 // A Pod is retained when it statisfies all specified rules

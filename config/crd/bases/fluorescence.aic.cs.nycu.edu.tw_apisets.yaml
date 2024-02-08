@@ -6987,11 +6987,6 @@ spec:
                           x-kubernetes-preserve-unknown-fields: true
                       type: object
                     response:
-                      properties:
-                        contentType:
-                          default: application/json
-                          description: Content-Type to fill for responses
-                          type: string
                       type: object
                   required:
                   - path
