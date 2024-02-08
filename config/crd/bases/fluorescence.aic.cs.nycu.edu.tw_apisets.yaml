@@ -6981,8 +6981,9 @@ spec:
                     request:
                       properties:
                         schema:
-                          description: JSON Schema to validate requests with, as a
-                            string of JSON or YAML TODO validate this with webhook?
+                          description: JSON Schema to validate requests with, as an
+                            inline object. Empty object may be used to enforce being
+                            JSON only. TODO validate this with webhook?
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
                       type: object

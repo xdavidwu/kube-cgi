@@ -42,13 +42,22 @@ func MustRegisterCollectors(r *prometheus.Registry) {
 	r.MustRegister(httpRequests, httpRequestsDuration, httpInflightRequests)
 }
 
-func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
+func drainBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log := r.Context().Value(ctxLogger).(*log.Logger)
 			log.Panic(err)
 		}
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(
+			r.Context(), ctxBody, bytes)))
+	})
+}
+
+func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bytes := r.Context().Value(ctxBody).([]byte)
 		var v interface{}
 		if json.Unmarshal(bytes, &v) != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
@@ -57,18 +66,15 @@ func validatesJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handle
 			w.Write(body)
 			return
 		}
-		if jsonSchema != nil {
-			if err = jsonSchema.Validate(v); err != nil {
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				msg := ErrorResponse{Message: err.Error()}
-				body, _ := json.Marshal(msg)
-				w.Write(body)
-				return
-			}
+		if err := jsonSchema.Validate(v); err != nil {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			msg := ErrorResponse{Message: err.Error()}
+			body, _ := json.Marshal(msg)
+			w.Write(body)
+			return
 		}
 
-		next.ServeHTTP(w, r.WithContext(context.WithValue(
-			r.Context(), ctxBody, bytes)))
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -94,10 +100,8 @@ func WithMiddlewares(handler *Handler) http.Handler {
 	if handler.Spec.Request != nil && handler.Spec.Request.Schema != nil {
 		schema := jsonschema.MustCompileString("api.schema.json", handler.Spec.Request.Schema.RawJSON)
 		stack = validatesJson(stack, schema)
-	} else {
-		// XXX seperate body draining into another middleware?
-		stack = validatesJson(stack, nil)
 	}
+	stack = drainBody(stack)
 
 	prepopulateLabels := prometheus.Labels{"handler": handler.Spec.Path, "code": "200"}
 	httpRequests.With(prepopulateLabels)

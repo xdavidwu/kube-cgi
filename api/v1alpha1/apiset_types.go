@@ -22,7 +22,8 @@ func (s *Schema) UnmarshalJSON(b []byte) error {
 }
 
 type Request struct {
-	// JSON Schema to validate requests with, as a string of JSON or YAML
+	// JSON Schema to validate requests with, as an inline object.
+	// Empty object may be used to enforce being JSON only.
 	// TODO validate this with webhook?
 	Schema *Schema `json:"schema,omitempty"`
 }
