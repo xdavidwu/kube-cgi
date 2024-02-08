@@ -68,27 +68,9 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	// XXX ssa needs gvk to be set, but this looks verbose
-	serviceAccount := corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      req.Name,
-			Namespace: req.Namespace,
-		},
-	}
+	serviceAccount := corev1.ServiceAccount{}
 
 	roleBinding := rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: rbacv1.SchemeGroupVersion.String(),
-			Kind:       "RoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      req.Name,
-			Namespace: req.Namespace,
-		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
@@ -105,14 +87,6 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	apiSetLabelValue := req.Namespace + "." + req.Name
 	deployment := appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: appsv1.SchemeGroupVersion.String(),
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      req.Name,
-			Namespace: req.Namespace,
-		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{apiSetKey: apiSetLabelValue},
@@ -161,14 +135,8 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	service := corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Service",
-		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      req.Name,
-			Namespace: req.Namespace,
-			Labels:    map[string]string{apiSetKey: apiSetLabelValue},
+			Labels: map[string]string{apiSetKey: apiSetLabelValue},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -203,14 +171,6 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 	ingress := networkingv1.Ingress{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: networkingv1.SchemeGroupVersion.String(),
-			Kind:       "Ingress",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      req.Name,
-			Namespace: req.Namespace,
-		},
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
 				{
@@ -241,14 +201,8 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// XXX
 	if r.PullSecret != nil {
 		secret := r.PullSecret.DeepCopy()
-		secret.TypeMeta = metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		}
-		secret.ObjectMeta = metav1.ObjectMeta{
-			Namespace: req.Namespace,
-			Name:      req.Name,
-		}
+		// reset that there is nothing (especially not managedFields) other than spec-like
+		secret.ObjectMeta = metav1.ObjectMeta{}
 		deployment.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
 			{
 				Name: req.Name,
@@ -260,14 +214,6 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	if apiSet.Spec.DAPI != nil && apiSet.Spec.DAPI.ServiceMonitor {
 		serviceMonitor := monitoringv1.ServiceMonitor{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: monitoringv1.SchemeGroupVersion.String(),
-				Kind:       "ServiceMonitor",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      req.Name,
-				Namespace: req.Namespace,
-			},
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{
 					MatchLabels: map[string]string{apiSetKey: apiSetLabelValue},
@@ -293,6 +239,16 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}()
 
 	for _, obj := range resources {
+		gvk, err := r.GroupVersionKindFor(obj.obj)
+		if err != nil {
+			log.Error(err, "cannot get gvk", "object", obj.obj)
+			return ctrl.Result{}, err
+		}
+		obj.obj.GetObjectKind().SetGroupVersionKind(gvk)
+
+		obj.obj.SetNamespace(req.Namespace)
+		obj.obj.SetName(req.Name)
+
 		err = ctrl.SetControllerReference(&apiSet, obj.obj, r.Scheme)
 		if err != nil {
 			log.Error(err, "cannot set owner", "object", obj.obj)
