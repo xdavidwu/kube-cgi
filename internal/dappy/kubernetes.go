@@ -34,50 +34,46 @@ const (
 	manager      = "dappy"
 )
 
-func logEventsForPod(log *log.Logger, c client.WithWatch, namespace string, uid types.UID) chan struct{} {
-	stop := make(chan struct{})
-	go func() {
-		listOptions := client.ListOptions{
-			Namespace:     namespace,
-			FieldSelector: fields.OneTermEqualSelector("involvedObject.uid", string(uid)),
-		}
-		var list corev1.EventList
-		err := c.List(context.Background(), &list, &listOptions)
-		if err != nil {
-			log.Panic(err)
-		}
-		for _, event := range list.Items {
-			log.Println(event.Message)
-		}
+func logEventsForPod(ctx context.Context, log *log.Logger, c client.WithWatch, namespace string, uid types.UID) {
+	listOptions := client.ListOptions{
+		Namespace:     namespace,
+		FieldSelector: fields.OneTermEqualSelector("involvedObject.uid", string(uid)),
+	}
+	var list corev1.EventList
+	err := c.List(context.Background(), &list, &listOptions)
+	if err != nil {
+		log.Panic(err)
+	}
+	for _, event := range list.Items {
+		log.Println(event.Message)
+	}
 
-		watcher, err := watchtools.NewRetryWatcher(
-			list.ListMeta.ResourceVersion,
-			&cache.ListWatch{
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					listOptions.Raw = &options
-					return c.Watch(context.Background(), &list, &listOptions)
-				},
+	watcher, err := watchtools.NewRetryWatcher(
+		list.ListMeta.ResourceVersion,
+		&cache.ListWatch{
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				listOptions.Raw = &options
+				return c.Watch(context.Background(), &list, &listOptions)
 			},
-		)
-		if err != nil {
-			log.Panic(err)
-		}
+		},
+	)
+	if err != nil {
+		log.Panic(err)
+	}
 
-		results := watcher.ResultChan()
-		for {
-			select {
-			case <-stop:
-				watcher.Stop()
-				return
-			case watchEvent := <-results:
-				if watchEvent.Type == watch.Added {
-					event := watchEvent.Object.(*corev1.Event)
-					log.Println(event.Message)
-				}
+	results := watcher.ResultChan()
+	for {
+		select {
+		case <-ctx.Done():
+			watcher.Stop()
+			return
+		case watchEvent := <-results:
+			if watchEvent.Type == watch.Added {
+				event := watchEvent.Object.(*corev1.Event)
+				log.Println(event.Message)
 			}
 		}
-	}()
-	return stop
+	}
 }
 
 func sanitize(i rune) rune {
@@ -146,8 +142,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("dispatched pod %s", name)
-	stop := logEventsForPod(log, h.Client, h.Namespace, pod.ObjectMeta.UID)
-	defer close(stop)
+	go logEventsForPod(ctx, log, h.Client, h.Namespace, pod.ObjectMeta.UID)
 
 	if pod.Spec.Containers[0].Stdin {
 		lastEvent, err := watchtools.Until(
