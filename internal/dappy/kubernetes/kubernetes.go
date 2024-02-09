@@ -140,6 +140,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	err := h.Client.Create(context.Background(), pod)
+	// TODO this catches only apiserver guards (which may be too loose), not actual failures
 	if err != nil && errors.IsRequestEntityTooLargeError(err) {
 		if !pod.Spec.Containers[0].Stdin {
 			log.Printf("pod spec too large but script does not accept stdin, rejecting request: %v", err)
@@ -155,6 +156,13 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("dispatched pod %s", pod.ObjectMeta.Name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
+	defer func() {
+		// TODO channel a sophisticated GC on a fixed goroutine instead
+		must(h.Client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod))
+		if pod.Status.Phase == corev1.PodSucceeded {
+			must(h.Client.Delete(context.Background(), pod))
+		}
+	}()
 
 	var list corev1.PodList
 	watchOptions := []client.ListOption{
@@ -162,96 +170,60 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// k8s.io/kubernetes/pkg/registry/core/pod.ToSelectableFields
 		client.MatchingFields{metav1.ObjectNameField: string(pod.ObjectMeta.Name)},
 	}
-	if pod.Spec.Containers[0].Stdin {
-		lastEvent, err := watchtools.Until(
-			ctx,
-			pod.ObjectMeta.ResourceVersion,
-			watcherWithOpts(h.Client, &list, watchOptions...),
-			func(event watch.Event) (bool, error) {
-				if event.Type == watch.Deleted {
-					log.Panic("pod deleted while still waiting")
-				}
-				if event.Type != watch.Added && event.Type != watch.Modified {
-					return false, nil
-				}
-				pod := event.Object.(*corev1.Pod)
-				if pod.Status.Phase == corev1.PodRunning {
-					return true, nil
-				}
-				if pod.Status.Phase == corev1.PodSucceeded ||
-					pod.Status.Phase == corev1.PodFailed {
-					return true, nil
-				}
-				return false, nil
-			},
-		)
-		must(err)
-		pod = lastEvent.Object.(*corev1.Pod)
-
-		if pod.Status.Phase == corev1.PodRunning {
-			url := h.OldClient.CoreV1().RESTClient().Post().
-				Namespace(h.Namespace).Resource("pods").
-				Name(pod.ObjectMeta.Name).SubResource("attach").
-				VersionedParams(&corev1.PodAttachOptions{
-					Stdin:  true,
-					Stdout: false,
-					Stderr: false,
-					TTY:    false,
-				}, scheme.ParameterCodec).URL()
-			attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
-			// does not really fire request yet, nothing should happen
-			must(err)
-			log.Printf("streaming input to pod")
-			err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
-				Stdin:  bytes.NewReader(input),
-				Stdout: nil,
-				Stderr: nil,
-				Tty:    false,
-			})
-			if err != nil {
-				log.Printf("streaming input: %v", err)
+	lastEvent, err := watchtools.Until(
+		ctx,
+		pod.ObjectMeta.ResourceVersion,
+		watcherWithOpts(h.Client, &list, watchOptions...),
+		func(event watch.Event) (bool, error) {
+			if event.Type == watch.Deleted {
+				log.Panic("pod deleted while still waiting")
 			}
+			if event.Type != watch.Added && event.Type != watch.Modified {
+				return false, nil
+			}
+			pod := event.Object.(*corev1.Pod)
+			if pod.Status.Phase == corev1.PodRunning {
+				return true, nil
+			}
+			if pod.Status.Phase == corev1.PodSucceeded ||
+				pod.Status.Phase == corev1.PodFailed {
+				return true, nil
+			}
+			return false, nil
+		},
+	)
+	must(err)
+	pod = lastEvent.Object.(*corev1.Pod)
+
+	if pod.Spec.Containers[0].Stdin && pod.Status.Phase == corev1.PodRunning {
+		url := h.OldClient.CoreV1().RESTClient().Post().
+			Namespace(h.Namespace).Resource("pods").
+			Name(pod.ObjectMeta.Name).SubResource("attach").
+			VersionedParams(&corev1.PodAttachOptions{
+				Stdin:  true,
+				Stdout: false,
+				Stderr: false,
+				TTY:    false,
+			}, scheme.ParameterCodec).URL()
+		attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
+		// does not really fire request yet, nothing should happen
+		must(err)
+		log.Printf("streaming input to pod")
+		err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
+			Stdin:  bytes.NewReader(input),
+			Stdout: nil,
+			Stderr: nil,
+			Tty:    false,
+		})
+		if err != nil {
+			log.Printf("streaming input: %v", err)
 		}
 	}
 
-	if pod.Status.Phase != corev1.PodSucceeded &&
-		pod.Status.Phase != corev1.PodFailed {
-		lastEvent, err := watchtools.Until(
-			ctx,
-			pod.ObjectMeta.ResourceVersion,
-			watcherWithOpts(h.Client, &list, watchOptions...),
-			func(event watch.Event) (bool, error) {
-				if event.Type == watch.Deleted {
-					log.Panic("pod deleted while still waiting")
-				}
-				if event.Type != watch.Added && event.Type != watch.Modified {
-					return false, nil
-				}
-				pod := event.Object.(*corev1.Pod)
-				if pod.Status.Phase == corev1.PodSucceeded ||
-					pod.Status.Phase == corev1.PodFailed {
-					return true, nil
-				}
-				return false, nil
-			},
-		)
-		must(err)
-		pod = lastEvent.Object.(*corev1.Pod)
-	}
-
-	log.Printf("pod terminated with phase %s", pod.Status.Phase)
-	switch pod.Status.Phase {
-	case corev1.PodSucceeded:
-		defer func() {
-			go func() {
-				must(h.Client.Delete(context.Background(), pod))
-			}()
-		}()
-	}
-
-	// XXX dynamic client supports only structured subresources
+	// XXX dynamic client supports only CRUD subresources
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
-	reader, err := pods.GetLogs(pod.ObjectMeta.Name, &corev1.PodLogOptions{}).Stream(ctx)
+	reader, err := pods.GetLogs(pod.ObjectMeta.Name,
+		&corev1.PodLogOptions{Follow: true}).Stream(ctx)
 	must(err)
 	defer reader.Close()
 	redir, err := cgi.WriteResponse(w, reader)
