@@ -11,6 +11,10 @@ import (
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 )
 
+const (
+	bodyEnvKey = "REQUEST_BODY"
+)
+
 type ctxKey string
 
 var (

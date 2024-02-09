@@ -134,7 +134,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  "INPUT",
+		Name:  bodyEnvKey,
 		Value: escapeKubernetesExpansion(string(input)),
 	})
 	must(controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme()))
