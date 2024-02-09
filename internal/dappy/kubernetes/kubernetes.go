@@ -129,15 +129,29 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Spec: *h.Spec.PodSpec.DeepCopy(),
 	}
 	for k, v := range cgi.VarsFromRequest(r) {
+		if dappy.EnvTooLarge(k, v) {
+			w.WriteHeader(http.StatusRequestHeaderFieldsTooLarge)
+			return
+		}
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  k,
 			Value: escapeKubernetesExpansion(v),
 		})
 	}
-	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  dappy.BodyEnvKey,
-		Value: escapeKubernetesExpansion(string(input)),
-	})
+
+	if !dappy.EnvTooLarge(dappy.BodyEnvKey, string(input)) {
+		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  dappy.BodyEnvKey,
+			Value: escapeKubernetesExpansion(string(input)),
+		})
+	} else {
+		if !pod.Spec.Containers[0].Stdin {
+			log.Printf("request body too large for env but script does not accept stdin, rejecting request")
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+		log.Printf("request body too large for env, relying on stdin only for request body")
+	}
 
 	err := h.Client.Create(context.Background(), pod)
 	// TODO this catches only apiserver guards (which may be too loose), not actual failures

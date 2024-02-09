@@ -7,7 +7,16 @@ import (
 
 const (
 	BodyEnvKey = "REQUEST_BODY"
+
+	// include/uapi/linux/binfmts.h:#define MAX_ARG_STRLEN (PAGE_SIZE * 32)
+	// actually depends on page size, but let's just assume 4k
+	MaxArgStrlen = 4096 * 32
 )
+
+func EnvTooLarge(k, v string) bool {
+	// including = and NULL
+	return len(k)+len(v)+2 > MaxArgStrlen
+}
 
 type ctxKey string
 
