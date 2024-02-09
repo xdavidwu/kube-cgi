@@ -8,7 +8,6 @@ import (
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
@@ -154,18 +153,6 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.Client.Create(context.Background(), pod)
-	// TODO this catches only apiserver guards (which may be too loose), not actual failures
-	if err != nil && errors.IsRequestEntityTooLargeError(err) {
-		if !pod.Spec.Containers[0].Stdin {
-			log.Printf("pod spec too large but script does not accept stdin, rejecting request: %v", err)
-			w.WriteHeader(http.StatusRequestEntityTooLarge)
-			return
-		}
-
-		log.Printf("pod spec too large, falling back to stdin only for request body: %v", err)
-		pod.Spec.Containers[0].Env = pod.Spec.Containers[0].Env[:len(pod.Spec.Containers[0].Env)-1]
-		err = h.Client.Create(context.Background(), pod)
-	}
 	must(err)
 
 	log.Printf("dispatched pod %s", pod.ObjectMeta.Name)
