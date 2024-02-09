@@ -21,7 +21,8 @@ import (
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
+	kubedappy "git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/kubernetes"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/middlewares"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 		),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
-	dappy.MustRegisterCollectors(prometheus)
+	middlewares.MustRegisterCollectors(prometheus)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
 	if err != nil {
@@ -87,7 +88,7 @@ func main() {
 
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
-		mux.Handle(apiSet.Spec.APIs[i].Path, dappy.KubernetesHandler{
+		mux.Handle(apiSet.Spec.APIs[i].Path, kubedappy.KubernetesHandler{
 			Client:       dynamicClient,
 			OldClient:    oldClient,
 			ClientConfig: config,

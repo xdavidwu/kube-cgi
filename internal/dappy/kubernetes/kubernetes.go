@@ -1,4 +1,4 @@
-package dappy
+package kubernetes
 
 import (
 	"bytes"
@@ -19,7 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/middlewares"
 )
 
 //+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
@@ -47,7 +49,7 @@ func watcherWithOpts(
 }
 
 func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, uid types.UID) {
-	log := loggerFromContext(ctx)
+	log := dappy.LoggerFromContext(ctx)
 	must := func(err error) {
 		if err != nil {
 			log.Panic(err)
@@ -106,7 +108,7 @@ type kHandler KubernetesHandler
 
 func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	log := loggerFromContext(ctx)
+	log := dappy.LoggerFromContext(ctx)
 	must := func(err error) {
 		if err != nil {
 			log.Panic(err)
@@ -114,9 +116,9 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("requested %s", r.RequestURI)
 
-	name := namify(h.Spec.Path) + "-" + idFromContext(ctx)
+	name := namify(h.Spec.Path) + "-" + dappy.IdFromContext(ctx)
 
-	input := bodyFromContext(ctx)
+	input := dappy.BodyFromContext(ctx)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.Namespace,
@@ -134,7 +136,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
-		Name:  bodyEnvKey,
+		Name:  dappy.BodyEnvKey,
 		Value: escapeKubernetesExpansion(string(input)),
 	})
 	must(controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme()))
@@ -267,8 +269,9 @@ func (h KubernetesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var stack http.Handler = kHandler(h)
 	if h.Spec.Request != nil && h.Spec.Request.Schema != nil {
 		schema := jsonschema.MustCompileString("api.schema.json", h.Spec.Request.Schema.RawJSON)
-		stack = validateJson(stack, schema)
+		stack = middlewares.ValidateJson(stack, schema)
 	}
-	stack = intrument(logWithIdentifier(drainBody(stack)), h.Spec.Path)
-	stack.ServeHTTP(w, r)
+	middlewares.Intrument(middlewares.LogWithIdentifier(
+		middlewares.DrainBody(stack)), h.Spec.Path).
+		ServeHTTP(w, r)
 }

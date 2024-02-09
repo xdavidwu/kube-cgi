@@ -1,7 +1,6 @@
-package dappy
+package middlewares
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	"k8s.io/apimachinery/pkg/util/rand"
+
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
 )
 
 var (
@@ -42,32 +43,32 @@ func MustRegisterCollectors(r *prometheus.Registry) {
 	r.MustRegister(httpRequests, httpRequestsDuration, httpInflightRequests)
 }
 
-func drainBody(next http.Handler) http.Handler {
+func DrainBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			loggerFromContext(r.Context()).Panic(err)
+			dappy.LoggerFromContext(r.Context()).Panic(err)
 		}
 
-		next.ServeHTTP(w, r.WithContext(context.WithValue(
-			r.Context(), ctxBody, bytes)))
+		next.ServeHTTP(w, r.WithContext(dappy.ContextWithBody(
+			r.Context(), bytes)))
 	})
 }
 
-func validateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
+func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes := bodyFromContext(r.Context())
+		bytes := dappy.BodyFromContext(r.Context())
 		var v interface{}
 		if json.Unmarshal(bytes, &v) != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			msg := ErrorResponse{Message: "request body is not json"}
+			msg := dappy.ErrorResponse{Message: "request body is not json"}
 			body, _ := json.Marshal(msg)
 			w.Write(body)
 			return
 		}
 		if err := jsonSchema.Validate(v); err != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			msg := ErrorResponse{Message: err.Error()}
+			msg := dappy.ErrorResponse{Message: err.Error()}
 			body, _ := json.Marshal(msg)
 			w.Write(body)
 			return
@@ -77,23 +78,23 @@ func validateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler
 	})
 }
 
-func logWithIdentifier(next http.Handler) http.Handler {
+func LogWithIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := rand.String(5)
-		ctx := context.WithValue(r.Context(), ctxId, id)
+		ctx := dappy.ContextWithId(r.Context(), id)
 		parent := log.Default()
 		logger := log.New(
 			parent.Writer(),
 			id+" ",
 			parent.Flags()|log.Lmsgprefix,
 		)
-		ctx = context.WithValue(ctx, ctxLogger, logger)
+		ctx = dappy.ContextWithLogger(ctx, logger)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func intrument(next http.Handler, name string) http.Handler {
+func Intrument(next http.Handler, name string) http.Handler {
 	prepopulateLabels := prometheus.Labels{"handler": name, "code": "200"}
 	httpRequests.With(prepopulateLabels)
 	httpRequestsDuration.With(prepopulateLabels)
