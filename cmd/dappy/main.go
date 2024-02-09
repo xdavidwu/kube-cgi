@@ -52,6 +52,7 @@ func main() {
 	clientgoscheme.AddToScheme(scheme)
 	fluorescencev1alpha1.AddToScheme(scheme)
 
+	// XXX WithWatch cannot be mixed with NewNamespacedClient yet
 	dynamicClient, err := client.NewWithWatch(config, client.Options{Scheme: scheme})
 	if err != nil {
 		panic(err)
@@ -65,17 +66,20 @@ func main() {
 		&client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: apiSetVersion}},
 	)
 
-	// XXX WithWatch cannot be mixed with NewNamespacedClient yet
+	ref, err := kubedappy.OwnerReferenceOf(dynamicClient, &apiSet)
+	if err != nil {
+		panic(err)
+	}
 
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
 		mux.Handle(apiSet.Spec.APIs[i].Path, kubedappy.KubernetesHandler{
-			Client:       dynamicClient,
-			OldClient:    oldClient,
-			ClientConfig: config,
-			Spec:         &apiSet.Spec.APIs[i],
-			Namespace:    namespace,
-			APISet:       &apiSet,
+			Client:         dynamicClient,
+			OldClient:      oldClient,
+			ClientConfig:   config,
+			Spec:           &apiSet.Spec.APIs[i],
+			Namespace:      namespace,
+			OwnerReference: ref,
 		})
 	}
 

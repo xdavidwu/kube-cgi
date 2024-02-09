@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
@@ -126,6 +125,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Labels: map[string]string{
 				managedByKey: manager,
 			},
+			OwnerReferences: []metav1.OwnerReference{h.OwnerReference},
 		},
 		Spec: *h.Spec.PodSpec.DeepCopy(),
 	}
@@ -139,7 +139,6 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:  dappy.BodyEnvKey,
 		Value: escapeKubernetesExpansion(string(input)),
 	})
-	must(controllerutil.SetControllerReference(h.APISet, pod, h.Client.Scheme()))
 
 	err := h.Client.Create(context.Background(), pod)
 	if err != nil && errors.IsRequestEntityTooLargeError(err) {
