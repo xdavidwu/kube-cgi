@@ -8,9 +8,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/server/healthz"
@@ -22,21 +19,11 @@ import (
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
 	kubedappy "git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/kubernetes"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/middlewares"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/metrics"
 )
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-
-	prometheus := prometheus.NewRegistry()
-	prometheus.MustRegister(
-		collectors.NewBuildInfoCollector(),
-		collectors.NewGoCollector(
-			collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll),
-		),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	)
-	middlewares.MustRegisterCollectors(prometheus)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
 	if err != nil {
@@ -46,13 +33,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	go http.Serve(promlisten, promhttp.InstrumentMetricHandler(
-		prometheus,
-		promhttp.HandlerFor(prometheus, promhttp.HandlerOpts{
-			ErrorLog: log.Default(),
-			Registry: prometheus,
-		}),
-	))
+	go http.Serve(promlisten, metrics.MetricHandler(log.Default()))
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
