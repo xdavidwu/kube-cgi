@@ -57,6 +57,7 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 
 	listOptions := []client.ListOption{
 		client.InNamespace(namespace),
+		// k8s.io/kubernetes/pkg/registry/core/event.ToSelectableFields
 		client.MatchingFields{"involvedObject.uid": string(uid)},
 	}
 
@@ -115,13 +116,11 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("requested %s", r.RequestURI)
 
-	name := namify(h.Spec.Path) + "-" + dappy.IdFromContext(ctx)
-
 	input := dappy.BodyFromContext(ctx)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.Namespace,
-			Name:      name,
+			Name:      namify(h.Spec.Path) + "-" + dappy.IdFromContext(ctx),
 			Labels: map[string]string{
 				managedByKey: manager,
 			},
@@ -154,13 +153,14 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	must(err)
 
-	log.Printf("dispatched pod %s", name)
+	log.Printf("dispatched pod %s", pod.ObjectMeta.Name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
 
 	var list corev1.PodList
 	watchOptions := []client.ListOption{
 		client.InNamespace(h.Namespace),
-		client.MatchingFields{"metadata.uid": string(pod.ObjectMeta.UID)},
+		// k8s.io/kubernetes/pkg/registry/core/pod.ToSelectableFields
+		client.MatchingFields{metav1.ObjectNameField: string(pod.ObjectMeta.Name)},
 	}
 	if pod.Spec.Containers[0].Stdin {
 		lastEvent, err := watchtools.Until(
@@ -191,7 +191,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if pod.Status.Phase == corev1.PodRunning {
 			url := h.OldClient.CoreV1().RESTClient().Post().
 				Namespace(h.Namespace).Resource("pods").
-				Name(name).SubResource("attach").
+				Name(pod.ObjectMeta.Name).SubResource("attach").
 				VersionedParams(&corev1.PodAttachOptions{
 					Stdin:  true,
 					Stdout: false,
@@ -251,7 +251,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// XXX dynamic client supports only structured subresources
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
-	reader, err := pods.GetLogs(name, &corev1.PodLogOptions{}).Stream(ctx)
+	reader, err := pods.GetLogs(pod.ObjectMeta.Name, &corev1.PodLogOptions{}).Stream(ctx)
 	must(err)
 	defer reader.Close()
 	redir, err := cgi.WriteResponse(w, reader)
