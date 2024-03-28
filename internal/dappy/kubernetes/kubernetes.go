@@ -218,6 +218,8 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil {
 			log.Printf("streaming input: %v", err)
+		} else {
+			log.Printf("request body of size %v fully streamed", len(input))
 		}
 	}
 
