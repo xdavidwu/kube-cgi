@@ -216,18 +216,21 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			reader = r.Body
 		}
-		log.Printf("streaming input to pod")
-		err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
-			Stdin:  reader,
-			Stdout: nil,
-			Stderr: nil,
-			Tty:    false,
-		})
-		if err != nil {
-			log.Printf("streaming input: %v", err)
-		} else {
-			log.Printf("request body fully streamed")
-		}
+
+		go func() {
+			log.Printf("streaming input to pod")
+			err := attach.StreamWithContext(ctx, remotecommand.StreamOptions{
+				Stdin:  reader,
+				Stdout: nil,
+				Stderr: nil,
+				Tty:    false,
+			})
+			if err != nil {
+				log.Printf("streaming input: %v", err)
+			} else {
+				log.Printf("request body fully streamed")
+			}
+		}()
 	}
 
 	// XXX dynamic client supports only CRUD subresources
