@@ -45,9 +45,19 @@ func MustRegisterCollectors(r *prometheus.Registry) {
 
 func DrainBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			dappy.LoggerFromContext(r.Context()).Panic(err)
+		log := dappy.LoggerFromContext(r.Context())
+
+		var bytes []byte
+		var err error
+		if r.ContentLength == -1 {
+			log.Println("missing content-length in request, not draining")
+		} else if r.ContentLength > int64(dappy.BodyEnvMaxSize) {
+			log.Println("request body too large for env, not draining")
+		} else {
+			bytes, err = io.ReadAll(http.MaxBytesReader(w, r.Body, r.ContentLength))
+			if err != nil {
+				log.Panic(err)
+			}
 		}
 
 		next.ServeHTTP(w, r.WithContext(dappy.ContextWithBody(
@@ -58,6 +68,12 @@ func DrainBody(next http.Handler) http.Handler {
 func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes := dappy.BodyFromContext(r.Context())
+		if bytes == nil {
+			dappy.LoggerFromContext(r.Context()).Println("json not validated due to body not drained")
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		var v interface{}
 		if json.Unmarshal(bytes, &v) != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)

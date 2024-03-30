@@ -13,6 +13,10 @@ const (
 	MaxArgStrlen = 4096 * 32
 )
 
+var (
+	BodyEnvMaxSize = MaxArgStrlen - 2 - len(BodyEnvKey)
+)
+
 func EnvTooLarge(k, v string) bool {
 	// including = and NULL
 	return len(k)+len(v)+2 > MaxArgStrlen

@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"strings"
 
@@ -138,18 +139,18 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if !dappy.EnvTooLarge(dappy.BodyEnvKey, string(input)) {
+	if input != nil {
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  dappy.BodyEnvKey,
 			Value: escapeKubernetesExpansion(string(input)),
 		})
 	} else {
 		if !pod.Spec.Containers[0].Stdin {
-			log.Printf("request body too large for env but script does not accept stdin, rejecting request")
+			log.Printf("request body not drained for env but script does not accept stdin, rejecting request")
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
 			return
 		}
-		log.Printf("request body too large for env, relying on stdin only for request body")
+		log.Printf("request body not drained for env, relying on stdin only for request body")
 	}
 
 	err := h.Client.Create(context.Background(), pod)
@@ -209,9 +210,16 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
 		// does not really fire request yet, nothing should happen
 		must(err)
+
+		var reader io.Reader
+		if input != nil {
+			reader = bytes.NewReader(input)
+		} else {
+			reader = r.Body
+		}
 		log.Printf("streaming input to pod")
 		err = attach.StreamWithContext(ctx, remotecommand.StreamOptions{
-			Stdin:  bytes.NewReader(input),
+			Stdin:  reader,
 			Stdout: nil,
 			Stderr: nil,
 			Tty:    false,
@@ -219,7 +227,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("streaming input: %v", err)
 		} else {
-			log.Printf("request body of size %v fully streamed", len(input))
+			log.Printf("request body fully streamed")
 		}
 	}
 
