@@ -114,7 +114,6 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Panic(err)
 		}
 	}
-	log.Printf("requested %s", r.RequestURI)
 
 	input := dappy.BodyFromContext(ctx)
 	pod := &corev1.Pod{

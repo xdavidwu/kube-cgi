@@ -106,6 +106,7 @@ func LogWithIdentifier(next http.Handler) http.Handler {
 		)
 		ctx = dappy.ContextWithLogger(ctx, logger)
 
+		logger.Printf("%q %q %q %q", r.Method, r.RequestURI, r.Referer(), r.UserAgent())
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
