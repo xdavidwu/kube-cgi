@@ -165,6 +165,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("exit code %v (signal %v), reason %s, message %q",
 				info.ExitCode, info.Signal, info.Reason, info.Message)
 		}
+		log.Printf("final pod phase: %v", pod.Status.Phase)
 		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodPending {
 			must(h.Client.Delete(context.Background(), pod))
 		}
