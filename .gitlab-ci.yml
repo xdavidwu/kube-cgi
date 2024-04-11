@@ -17,6 +17,7 @@ test:
   stage: package
   variables:
     KO_DOCKER_REPO: $CI_REGISTRY_IMAGE
+    CGO_ENABLED: 0
   before_script:
     - echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
     - apk add ko go
