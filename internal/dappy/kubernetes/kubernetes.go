@@ -160,6 +160,11 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		// TODO channel a sophisticated GC on a fixed goroutine instead
 		must(h.Client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod))
+		if pod.Status.ContainerStatuses != nil && pod.Status.ContainerStatuses[0].State.Terminated != nil {
+			info := pod.Status.ContainerStatuses[0].State.Terminated
+			log.Printf("exit code %v (signal %v), reason %s, message %q",
+				info.ExitCode, info.Signal, info.Reason, info.Message)
+		}
 		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodPending {
 			must(h.Client.Delete(context.Background(), pod))
 		}
