@@ -45,9 +45,9 @@ spec:
                       type: string
                     podSpec:
                       description: Spec of the pod, Only one container expected, restartPolicy
-                        should be Never. If stdin of the container is true, stdinOnce
-                        should also be true, where request body will also be sent
-                        to stdin.
+                        must be Never. If stdin of the container is true, stdinOnce
+                        must also be true, where request body will also be sent to
+                        stdin.
                       properties:
                         activeDeadlineSeconds:
                           description: Optional duration in seconds the pod may be
@@ -6978,6 +6978,14 @@ spec:
                       required:
                       - containers
                       type: object
+                      x-kubernetes-validations:
+                      - message: Only one container in each podSpec is allowed
+                        rule: self.containers.size() == 1
+                      - message: Container with stdin must also set stdinOnce
+                        rule: '!has(self.containers[0].stdin) || self.containers[0].stdin
+                          != true || self.containers[0].stdinOnce == true'
+                      - message: restartPolicy must be Never
+                        rule: self.restartPolicy == 'Never'
                     request:
                       properties:
                         schema:

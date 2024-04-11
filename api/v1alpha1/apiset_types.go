@@ -60,9 +60,12 @@ type API struct {
 	Path string `json:"path"`
 
 	// Spec of the pod,
-	// Only one container expected, restartPolicy should be Never.
-	// If stdin of the container is true, stdinOnce should also be true,
+	// Only one container expected, restartPolicy must be Never.
+	// If stdin of the container is true, stdinOnce must also be true,
 	// where request body will also be sent to stdin.
+	//+kubebuilder:validation:XValidation:message="Only one container in each podSpec is allowed",rule="self.containers.size() == 1"
+	//+kubebuilder:validation:XValidation:message="Container with stdin must also set stdinOnce",rule="!has(self.containers[0].stdin) || self.containers[0].stdin != true || self.containers[0].stdinOnce == true"
+	//+kubebuilder:validation:XValidation:message="restartPolicy must be Never",rule="self.restartPolicy == 'Never'"
 	corev1.PodSpec `json:"podSpec"`
 
 	*Request  `json:"request,omitempty"`
