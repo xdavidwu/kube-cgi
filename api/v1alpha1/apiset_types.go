@@ -65,7 +65,9 @@ type API struct {
 	// where request body will also be sent to stdin.
 	//+kubebuilder:validation:XValidation:message="Only one container in each podSpec is allowed",rule="self.containers.size() == 1"
 	//+kubebuilder:validation:XValidation:message="Container with stdin must also set stdinOnce",rule="!has(self.containers[0].stdin) || self.containers[0].stdin != true || self.containers[0].stdinOnce == true"
-	//+kubebuilder:validation:XValidation:message="restartPolicy must be Never",rule="self.restartPolicy == 'Never'"
+	//+kubebuilder:validation:XValidation:message="restartPolicy must be Never",rule="self.restartPolicy == 'Never' && (!has(self.containers[0].restartPolicy) || self.containers[0].restartPolicy == 'Never')"
+	//+kubebuilder:validation:XValidation:message="initContainers is not supported",rule="!has(self.initContainers) || self.initContainers.size() == 0"
+	//+kubebuilder:validation:XValidation:message="ephemeralContainers is not supported",rule="!has(self.ephemeralContainers)"
 	corev1.PodSpec `json:"podSpec"`
 
 	*Request  `json:"request,omitempty"`

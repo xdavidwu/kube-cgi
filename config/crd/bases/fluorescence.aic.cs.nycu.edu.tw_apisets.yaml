@@ -6985,7 +6985,13 @@ spec:
                         rule: '!has(self.containers[0].stdin) || self.containers[0].stdin
                           != true || self.containers[0].stdinOnce == true'
                       - message: restartPolicy must be Never
-                        rule: self.restartPolicy == 'Never'
+                        rule: self.restartPolicy == 'Never' && (!has(self.containers[0].restartPolicy)
+                          || self.containers[0].restartPolicy == 'Never')
+                      - message: initContainers is not supported
+                        rule: '!has(self.initContainers) || self.initContainers.size()
+                          == 0'
+                      - message: ephemeralContainers is not supported
+                        rule: '!has(self.ephemeralContainers)'
                     request:
                       properties:
                         schema:
