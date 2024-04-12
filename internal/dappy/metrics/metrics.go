@@ -1,9 +1,10 @@
 package metrics
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -11,7 +12,15 @@ import (
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/middlewares"
 )
 
-func MetricHandler(l *log.Logger) http.Handler {
+type promhttpLogrAdaptor struct {
+	logr.Logger
+}
+
+func (p promhttpLogrAdaptor) Println(v ...interface{}) {
+	p.Info(fmt.Sprintln(v...))
+}
+
+func MetricHandler(l logr.Logger) http.Handler {
 	prometheus := prometheus.NewRegistry()
 	prometheus.MustRegister(
 		collectors.NewBuildInfoCollector(),
@@ -25,7 +34,7 @@ func MetricHandler(l *log.Logger) http.Handler {
 	return promhttp.InstrumentMetricHandler(
 		prometheus,
 		promhttp.HandlerFor(prometheus, promhttp.HandlerOpts{
-			ErrorLog: l,
+			ErrorLog: promhttpLogrAdaptor{l},
 			Registry: prometheus,
 		}),
 	)

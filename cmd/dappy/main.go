@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
 
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/server/healthz"
@@ -15,15 +16,19 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
 	kubedappy "git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/kubernetes"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/metrics"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/log"
 )
 
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	opts := log.BuildZapOptions(flag.CommandLine)
+	log := zap.New(zap.UseFlagOptions(&opts))
+	flag.Parse()
 
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
 	if err != nil {
@@ -33,7 +38,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	go http.Serve(promlisten, metrics.MetricHandler(log.Default()))
+	go http.Serve(promlisten, metrics.MetricHandler(log.WithName("metrics")))
 
 	config, err := config.GetConfig()
 	if err != nil {
@@ -88,12 +93,14 @@ func main() {
 		func(r *http.Request) error {
 			err = oldClient.CoreV1().RESTClient().Get().AbsPath("/readyz").Do(r.Context()).Error()
 			if err != nil {
-				log.Printf("cannot reach apiserver: %v", err)
+				log.WithName("healthcheck").Error(err, "cannot reach apiserver")
 			}
 			return err
 		},
 	))
 
-	server := &http.Server{Handler: mux}
+	server := &http.Server{Handler: mux, BaseContext: func(net.Listener) context.Context {
+		return logr.NewContext(context.Background(), log)
+	}}
 	server.Serve(listen)
 }

@@ -3,9 +3,9 @@ package middlewares
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
@@ -45,18 +45,19 @@ func MustRegisterCollectors(r *prometheus.Registry) {
 
 func DrainBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log := dappy.LoggerFromContext(r.Context())
+		log := logr.FromContextOrDiscard(r.Context())
 
 		var bytes []byte
 		var err error
 		if r.ContentLength == -1 {
-			log.Println("missing content-length in request, not draining")
+			log.Info("missing content-length in request, not draining")
 		} else if r.ContentLength > int64(dappy.BodyEnvMaxSize) {
-			log.Println("request body too large for env, not draining")
+			log.Info("request body too large for env, not draining")
 		} else {
 			bytes, err = io.ReadAll(http.MaxBytesReader(w, r.Body, r.ContentLength))
 			if err != nil {
-				log.Panic(err)
+				log.Error(err, "cannot drain body")
+				panic(err)
 			}
 		}
 
@@ -69,7 +70,8 @@ func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes := dappy.BodyFromContext(r.Context())
 		if bytes == nil {
-			dappy.LoggerFromContext(r.Context()).Println("json not validated due to body not drained")
+			log := logr.FromContextOrDiscard(r.Context())
+			log.Info("json not validated due to body not drained")
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -98,15 +100,10 @@ func LogWithIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := rand.String(5)
 		ctx := dappy.ContextWithId(r.Context(), id)
-		parent := log.Default()
-		logger := log.New(
-			parent.Writer(),
-			id+" ",
-			parent.Flags()|log.Lmsgprefix,
-		)
-		ctx = dappy.ContextWithLogger(ctx, logger)
+		log := logr.FromContextOrDiscard(ctx).WithName(id)
+		ctx = logr.NewContext(ctx, log)
 
-		logger.Printf("%q %q %q %q", r.Method, r.RequestURI, r.Referer(), r.UserAgent())
+		log.Info("requested", "method", r.Method, "uri", r.RequestURI, "referer", r.Referer(), "agent", r.UserAgent())
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

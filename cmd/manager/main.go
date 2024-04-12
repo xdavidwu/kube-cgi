@@ -24,6 +24,7 @@ import (
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/controller"
+	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/log"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -53,10 +54,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&dapiImage, "dapi-image", "", "DAPI image to use.")
 	flag.StringVar(&pullSecretRef, "pull-secret", "", "namespace/name of imagePullSecret for DAPI image")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
+	opts := log.BuildZapOptions(flag.CommandLine)
 	flag.Parse()
 
 	if dapiImage == "" {

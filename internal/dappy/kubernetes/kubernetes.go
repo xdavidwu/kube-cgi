@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-logr/logr"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,10 +49,11 @@ func watcherWithOpts(
 }
 
 func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, uid types.UID) {
-	log := dappy.LoggerFromContext(ctx)
-	must := func(err error) {
+	log := logr.FromContextOrDiscard(ctx)
+	must := func(err error, op string) {
 		if err != nil {
-			log.Panic(err)
+			log.Error(err, "cannot "+op)
+			panic(err)
 		}
 	}
 
@@ -62,16 +64,16 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 	}
 
 	var list corev1.EventList
-	must(c.List(context.Background(), &list, listOptions...))
+	must(c.List(context.Background(), &list, listOptions...), "list events")
 	for _, event := range list.Items {
-		log.Println(event.Message)
+		log.Info(event.Message)
 	}
 
 	watcher, err := watchtools.NewRetryWatcher(
 		list.ListMeta.ResourceVersion,
 		watcherWithOpts(c, &list, listOptions...),
 	)
-	must(err)
+	must(err, "watch events")
 
 	results := watcher.ResultChan()
 	for {
@@ -82,7 +84,7 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 		case watchEvent := <-results:
 			if watchEvent.Type == watch.Added {
 				event := watchEvent.Object.(*corev1.Event)
-				log.Println(event.Message)
+				log.Info(event.Message)
 			}
 		}
 	}
@@ -108,10 +110,11 @@ type kHandler KubernetesHandler
 
 func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	log := dappy.LoggerFromContext(ctx)
-	must := func(err error) {
+	log := logr.FromContextOrDiscard(ctx)
+	must := func(err error, op string) {
 		if err != nil {
-			log.Panic(err)
+			log.Error(err, "cannot "+op)
+			panic(err)
 		}
 	}
 
@@ -145,29 +148,28 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	} else {
 		if !pod.Spec.Containers[0].Stdin {
-			log.Printf("request body not drained for env but script does not accept stdin, rejecting request")
+			log.Info("request body not drained for env but script does not accept stdin, rejecting request")
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
 			return
 		}
-		log.Printf("request body not drained for env, relying on stdin only for request body")
+		log.Info("request body not drained for env, relying on stdin only for request body")
 	}
 
 	err := h.Client.Create(context.Background(), pod)
-	must(err)
+	must(err, "create pod")
 
-	log.Printf("dispatched pod %s", pod.ObjectMeta.Name)
+	log.Info("dispatched pod", "name", pod.ObjectMeta.Name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
 	defer func() {
 		// TODO channel a sophisticated GC on a fixed goroutine instead
-		must(h.Client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod))
+		must(h.Client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod), "get pod")
 		if pod.Status.ContainerStatuses != nil && pod.Status.ContainerStatuses[0].State.Terminated != nil {
 			info := pod.Status.ContainerStatuses[0].State.Terminated
-			log.Printf("exit code %v (signal %v), reason %s, message %q",
-				info.ExitCode, info.Signal, info.Reason, info.Message)
+			log.Info("exited", "code", info.ExitCode, "signal", info.Signal, "reason", info.Reason, "message", info.Message)
 		}
-		log.Printf("final pod phase: %v", pod.Status.Phase)
+		log.Info("final pod phase", "phase", pod.Status.Phase)
 		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodPending {
-			must(h.Client.Delete(context.Background(), pod))
+			must(h.Client.Delete(context.Background(), pod), "delete pod")
 		}
 	}()
 
@@ -183,7 +185,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		watcherWithOpts(h.Client, &list, watchOptions...),
 		func(event watch.Event) (bool, error) {
 			if event.Type == watch.Deleted {
-				log.Panic("pod deleted while still waiting")
+				log.Info("pod deleted while still waiting")
 			}
 			if event.Type != watch.Added && event.Type != watch.Modified {
 				return false, nil
@@ -199,7 +201,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return false, nil
 		},
 	)
-	must(err)
+	must(err, "watch pod")
 	pod = lastEvent.Object.(*corev1.Pod)
 
 	if pod.Spec.Containers[0].Stdin && pod.Status.Phase == corev1.PodRunning {
@@ -214,7 +216,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}, scheme.ParameterCodec).URL()
 		attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
 		// does not really fire request yet, nothing should happen
-		must(err)
+		must(err, "attach pod")
 
 		var reader io.Reader
 		if input != nil {
@@ -224,7 +226,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		go func() {
-			log.Printf("streaming input to pod")
+			log.Info("streaming input to pod")
 			err := attach.StreamWithContext(ctx, remotecommand.StreamOptions{
 				Stdin:  reader,
 				Stdout: nil,
@@ -232,9 +234,9 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Tty:    false,
 			})
 			if err != nil {
-				log.Printf("streaming input: %v", err)
+				log.Error(err, "streaming input")
 			} else {
-				log.Printf("request body fully streamed")
+				log.Info("request body fully streamed")
 			}
 		}()
 	}
@@ -243,15 +245,16 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
 	reader, err := pods.GetLogs(pod.ObjectMeta.Name,
 		&corev1.PodLogOptions{Follow: true}).Stream(ctx)
-	must(err)
+	must(err, "get pod logs")
 	defer reader.Close()
 	redir, err := cgi.WriteResponse(w, reader)
 	if redir != "" {
-		log.Panic("interal redirects not implemented")
+		log.Info("interal redirects not implemented")
+		panic("not implemented")
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Print(err)
+		log.Error(err, "cannnot proxy cgi response")
 	}
 }
 
