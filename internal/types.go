@@ -7,4 +7,6 @@ const (
 
 	DAPIPort        = 1234
 	DAPIMetricsPort = 5678
+
+	DAPIReadinessEndpointPath = "/readyz"
 )

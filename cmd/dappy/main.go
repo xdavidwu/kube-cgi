@@ -11,11 +11,11 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
@@ -88,16 +88,21 @@ func main() {
 		})
 	}
 
-	healthz.InstallReadyzHandler(mux, healthz.PingHealthz, healthz.NamedCheck(
-		"apiserver",
-		func(r *http.Request) error {
-			err = oldClient.CoreV1().RESTClient().Get().AbsPath("/readyz").Do(r.Context()).Error()
-			if err != nil {
-				log.WithName("healthcheck").Error(err, "cannot reach apiserver")
-			}
-			return err
+	readinessHandler := http.StripPrefix(internal.DAPIReadinessEndpointPath, &healthz.Handler{
+		Checks: map[string]healthz.Checker{
+			"ping": healthz.Ping,
+			"apiserver": func(r *http.Request) error {
+				err = oldClient.CoreV1().RESTClient().Get().AbsPath("/readyz").Do(r.Context()).Error()
+				if err != nil {
+					log.WithName("healthcheck").Error(err, "cannot reach apiserver")
+				}
+				return err
+			},
 		},
-	))
+	})
+
+	mux.Handle(internal.DAPIReadinessEndpointPath, readinessHandler)
+	mux.Handle(internal.DAPIReadinessEndpointPath+"/", readinessHandler)
 
 	server := &http.Server{Handler: mux, BaseContext: func(net.Listener) context.Context {
 		return logr.NewContext(context.Background(), log)
