@@ -43,6 +43,9 @@ spec:
       containers:
       - args:
         - --leader-elect
+        env:
+        - name: ENABLE_WEBHOOKS
+          value: "false"
         image: controller:latest
         name: manager
         securityContext:
