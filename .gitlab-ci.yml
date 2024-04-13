@@ -43,7 +43,7 @@ deploy:
     - kubectl config use-context aic/infra/agent:aic
   script:
     - envsubst < config/aic/kustomization.yaml.envsubst > config/aic/kustomization.yaml
-    - kubectl apply -k config/aic
+    - kubectl kustomize config/aic/ --load-restrictor LoadRestrictionsNone | kubectl apply -f -
     - |
       kubectl create secret docker-registry gitlab-registry \
         --docker-server="$CI_REGISTRY" --docker-username="$CI_DEPLOY_USER" \
