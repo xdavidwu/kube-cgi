@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -124,7 +125,8 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Namespace: h.Namespace,
 			Name:      namify(h.Spec.Path) + "-" + dappy.IdFromContext(ctx),
 			Labels: map[string]string{
-				managedByKey: manager,
+				managedByKey:  manager,
+				generationKey: strconv.FormatInt(h.Generation, 10),
 			},
 			OwnerReferences: []metav1.OwnerReference{h.OwnerReference},
 		},

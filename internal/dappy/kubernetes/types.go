@@ -9,6 +9,10 @@ import (
 	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 )
 
+var (
+	generationKey = fluorescencev1alpha1.GroupVersion.Group + "/generation"
+)
+
 type KubernetesHandler struct {
 	Client         client.WithWatch
 	OldClient      *kubernetes.Clientset
@@ -16,4 +20,5 @@ type KubernetesHandler struct {
 	Namespace      string
 	Spec           *fluorescencev1alpha1.API
 	OwnerReference metav1.OwnerReference
+	Generation     int64
 }

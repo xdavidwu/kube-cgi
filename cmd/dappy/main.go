@@ -85,6 +85,7 @@ func main() {
 			Spec:           &apiSet.Spec.APIs[i],
 			Namespace:      namespace,
 			OwnerReference: ref,
+			Generation:     apiSet.Generation,
 		})
 	}
 
