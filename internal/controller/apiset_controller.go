@@ -45,12 +45,15 @@ type APISetReconciler struct {
 // rbac in internal/dappy is also set on manager to be able to bind
 
 const (
-	fieldManager    = "fluorescence"
-	managedByKey    = "app.kubernetes.io/managed-by"
-	manager         = "fluorescence"
-	metricsPortName = "metrics"
-	httpPortName    = "http"
-	apiSetKey       = "fluorescence.aic.cs.nycu.edu.tw/apiset"
+	fieldManager     = "fluorescence"
+	managedByKey     = "app.kubernetes.io/managed-by"
+	managedByManager = fieldManager
+	metricsPortName  = "metrics"
+	httpPortName     = "http"
+)
+
+var (
+	apiSetKey = fluorescencev1alpha1.GroupVersion.Group + "/apiset"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -259,7 +262,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if labels == nil {
 			labels = map[string]string{}
 		}
-		labels[managedByKey] = manager
+		labels[managedByKey] = managedByManager
 		obj.obj.SetLabels(labels)
 
 		err = r.Patch(ctx, obj.obj, client.Apply, client.ForceOwnership, client.FieldOwner(fieldManager))
