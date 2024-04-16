@@ -72,6 +72,8 @@ func main() {
 	ref, err := kubedappy.OwnerReferenceOf(dynamicClient, &apiSet)
 	must(err, "set up ownerreference")
 
+	go kubedappy.CleanupOldGeneration(log.WithName("cleanup"), dynamicClient, namespace, apiSet.Generation)
+
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
 		mux.Handle(apiSet.Spec.APIs[i].Path, kubedappy.KubernetesHandler{

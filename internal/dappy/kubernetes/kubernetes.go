@@ -36,6 +36,36 @@ const (
 	manager      = "dappy"
 )
 
+func CleanupOldGeneration(log logr.Logger, c client.Client, namespace string,
+	currentGeneration int64) {
+	var list corev1.PodList
+	err := c.List(context.Background(), &list, client.InNamespace(namespace),
+		client.MatchingLabels{managedByKey: manager})
+	if err != nil {
+		log.Error(err, "cannot list pods")
+		panic("cannot list pods")
+	}
+
+	for _, pod := range list.Items {
+		generation, _ := strconv.ParseInt(pod.Labels[generationKey], 10, 0)
+		if generation >= currentGeneration {
+			continue
+		}
+
+		if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
+			log.Info("found non-terminated pod of previos geneation",
+				"pod", pod.Name, "generation", generation, "phase", pod.Status.Phase)
+			continue
+		}
+		log.Info("delete terminated pod of previous generation",
+			"pod", pod.Name, "generation", generation)
+		err = c.Delete(context.Background(), &pod)
+		if err != nil {
+			log.Error(err, "cannot delete pod", "pod", pod.Name)
+		}
+	}
+}
+
 func watcherWithOpts(
 	c client.WithWatch,
 	list client.ObjectList,
