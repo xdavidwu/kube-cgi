@@ -24,7 +24,6 @@ func (s *Schema) UnmarshalJSON(b []byte) error {
 type Request struct {
 	// JSON Schema to validate requests with, as an inline object.
 	// Empty object may be used to enforce being JSON only.
-	// TODO validate this with webhook?
 	Schema *Schema `json:"schema,omitempty"`
 }
 
@@ -54,12 +53,12 @@ type HistoryLimit struct {
 }
 
 type API struct {
-	// Path of this API endpoint
-	// /readyz is reserved for internal readiness checks
+	// Path of this API endpoint.
+	// /readyz is reserved for internal readiness checks.
 	//+kubebuilder:validation:Format=uri
 	Path string `json:"path"`
 
-	// Spec of the pod,
+	// Spec of the pod.
 	// Only one container expected, restartPolicy must be Never.
 	// If stdin of the container is true, stdinOnce must also be true,
 	// where request body will also be sent to stdin.

@@ -52,12 +52,12 @@ spec:
                 items:
                   properties:
                     path:
-                      description: Path of this API endpoint /readyz is reserved for
-                        internal readiness checks
+                      description: Path of this API endpoint. /readyz is reserved
+                        for internal readiness checks.
                       format: uri
                       type: string
                     podSpec:
-                      description: Spec of the pod, Only one container expected, restartPolicy
+                      description: Spec of the pod. Only one container expected, restartPolicy
                         must be Never. If stdin of the container is true, stdinOnce
                         must also be true, where request body will also be sent to
                         stdin.
@@ -7010,7 +7010,7 @@ spec:
                         schema:
                           description: JSON Schema to validate requests with, as an
                             inline object. Empty object may be used to enforce being
-                            JSON only. TODO validate this with webhook?
+                            JSON only.
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
                       type: object
