@@ -11,6 +11,7 @@ import (
 
 var (
 	generationKey = fluorescencev1alpha1.GroupVersion.Group + "/generation"
+	pathKey       = fluorescencev1alpha1.GroupVersion.Group + "/path"
 )
 
 type KubernetesHandler struct {

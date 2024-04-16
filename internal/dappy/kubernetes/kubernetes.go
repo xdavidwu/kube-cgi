@@ -119,14 +119,16 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	path := namify(h.Spec.Path)
 	input := dappy.BodyFromContext(ctx)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.Namespace,
-			Name:      namify(h.Spec.Path) + "-" + dappy.IdFromContext(ctx),
+			Name:      path + "-" + dappy.IdFromContext(ctx),
 			Labels: map[string]string{
 				managedByKey:  manager,
 				generationKey: strconv.FormatInt(h.Generation, 10),
+				pathKey:       path,
 			},
 			OwnerReferences: []metav1.OwnerReference{h.OwnerReference},
 		},
