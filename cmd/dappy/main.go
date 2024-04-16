@@ -72,7 +72,7 @@ func main() {
 	ref, err := kubedappy.OwnerReferenceOf(dynamicClient, &apiSet)
 	must(err, "set up ownerreference")
 
-	go kubedappy.CleanupOldGeneration(log.WithName("cleanup"), dynamicClient, &apiSet)
+	go kubedappy.CollectGarbage(log.WithName("gc"), dynamicClient, &apiSet)
 
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
