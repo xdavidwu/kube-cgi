@@ -20,6 +20,7 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
 	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/middlewares"
@@ -36,25 +37,45 @@ const (
 	manager      = "dappy"
 )
 
-func CleanupOldGeneration(log logr.Logger, c client.Client, namespace string,
-	currentGeneration int64) {
+func CleanupOldGeneration(log logr.Logger, c client.Client,
+	current *fluorescencev1alpha1.APISet) {
 	var list corev1.PodList
-	err := c.List(context.Background(), &list, client.InNamespace(namespace),
+	err := c.List(context.Background(), &list,
+		client.InNamespace(current.Namespace),
 		client.MatchingLabels{managedByKey: manager})
 	if err != nil {
 		log.Error(err, "cannot list pods")
 		panic("cannot list pods")
 	}
 
+	keep := map[corev1.PodPhase]bool{}
+
+	if current.Spec.HistoryLimit != nil {
+		for _, item := range []struct {
+			phase corev1.PodPhase
+			spec  *fluorescencev1alpha1.HistoryLimitSpec
+		}{
+			{corev1.PodSucceeded, &current.Spec.Succeeded},
+			{corev1.PodFailed, &current.Spec.Failed},
+		} {
+			if item.spec != nil && item.spec.KeepPreviousVersions != nil {
+				keep[item.phase] = *item.spec.KeepPreviousVersions
+			}
+		}
+	}
+
 	for _, pod := range list.Items {
 		generation, _ := strconv.ParseInt(pod.Labels[generationKey], 10, 0)
-		if generation >= currentGeneration {
+		if generation >= current.Generation {
 			continue
 		}
 
 		if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
 			log.Info("found non-terminated pod of previos geneation",
 				"pod", pod.Name, "generation", generation, "phase", pod.Status.Phase)
+			continue
+		}
+		if keep[pod.Status.Phase] {
 			continue
 		}
 		log.Info("delete terminated pod of previous generation",

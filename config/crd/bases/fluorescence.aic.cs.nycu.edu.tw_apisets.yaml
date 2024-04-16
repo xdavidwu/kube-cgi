@@ -7039,7 +7039,7 @@ spec:
                 properties:
                   failed:
                     description: A Pod is retained when it statisfies all specified
-                      rules TODO impl
+                      rules
                     properties:
                       keepPreviousVersions:
                         default: false
@@ -7047,18 +7047,19 @@ spec:
                           be retained
                         type: boolean
                       maxAge:
-                        description: Pod with terminated time under this range should
-                          be retained
+                        description: Retain pods from current version for at most
+                          this amount of seconds TODO impl
                         format: int32
                         type: integer
                       maxCount:
-                        description: Retain at most this number of pods
+                        description: Retain at most this number of pods from current
+                          version TODO impl
                         format: int32
                         type: integer
                     type: object
                   succeeded:
                     description: A Pod is retained when it statisfies all specified
-                      rules TODO impl
+                      rules
                     properties:
                       keepPreviousVersions:
                         default: false
@@ -7066,12 +7067,13 @@ spec:
                           be retained
                         type: boolean
                       maxAge:
-                        description: Pod with terminated time under this range should
-                          be retained
+                        description: Retain pods from current version for at most
+                          this amount of seconds TODO impl
                         format: int32
                         type: integer
                       maxCount:
-                        description: Retain at most this number of pods
+                        description: Retain at most this number of pods from current
+                          version TODO impl
                         format: int32
                         type: integer
                     type: object

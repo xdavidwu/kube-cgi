@@ -33,12 +33,13 @@ type Response struct {
 }
 
 // A Pod is retained when it statisfies all specified rules
-// TODO impl
 type HistoryLimitSpec struct {
-	// Retain at most this number of pods
+	// Retain at most this number of pods from current version
+	// TODO impl
 	MaxCount *int32 `json:"maxCount,omitempty"`
 
-	// Pod with terminated time under this range should be retained
+	// Retain pods from current version for at most this amount of seconds
+	// TODO impl
 	MaxAge *int32 `json:"maxAge,omitempty"`
 
 	// Pod from older version of this APISet should be retained
