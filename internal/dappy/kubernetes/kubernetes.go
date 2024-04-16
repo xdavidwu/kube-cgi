@@ -37,6 +37,7 @@ const (
 )
 
 func watcherWithOpts(
+	ctx context.Context,
 	c client.WithWatch,
 	list client.ObjectList,
 	opts ...client.ListOption,
@@ -44,7 +45,7 @@ func watcherWithOpts(
 	return &cache.ListWatch{
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 			merged := append(opts, &client.ListOptions{Raw: &options})
-			return c.Watch(context.Background(), list, merged...)
+			return c.Watch(ctx, list, merged...)
 		},
 	}
 }
@@ -65,14 +66,14 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 	}
 
 	var list corev1.EventList
-	must(c.List(context.Background(), &list, listOptions...), "list events")
+	must(c.List(ctx, &list, listOptions...), "list events")
 	for _, event := range list.Items {
 		log.Info(event.Message)
 	}
 
 	watcher, err := watchtools.NewRetryWatcher(
 		list.ListMeta.ResourceVersion,
-		watcherWithOpts(c, &list, listOptions...),
+		watcherWithOpts(ctx, c, &list, listOptions...),
 	)
 	must(err, "watch events")
 
@@ -186,7 +187,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	lastEvent, err := watchtools.Until(
 		ctx,
 		pod.ObjectMeta.ResourceVersion,
-		watcherWithOpts(h.Client, &list, watchOptions...),
+		watcherWithOpts(ctx, h.Client, &list, watchOptions...),
 		func(event watch.Event) (bool, error) {
 			if event.Type == watch.Deleted {
 				log.Info("pod deleted while still waiting")
