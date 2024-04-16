@@ -7037,11 +7037,11 @@ spec:
               historyLimit:
                 description: Policies to retain historic pods
                 properties:
-                  failure:
+                  failed:
                     description: A Pod is retained when it statisfies all specified
                       rules TODO impl
                     properties:
-                      includePreviousVersions:
+                      keepPreviousVersions:
                         default: false
                         description: Pod from older version of this APISet should
                           be retained
@@ -7056,11 +7056,11 @@ spec:
                         format: int32
                         type: integer
                     type: object
-                  success:
+                  succeeded:
                     description: A Pod is retained when it statisfies all specified
                       rules TODO impl
                     properties:
-                      includePreviousVersions:
+                      keepPreviousVersions:
                         default: false
                         description: Pod from older version of this APISet should
                           be retained

@@ -43,13 +43,13 @@ type HistoryLimitSpec struct {
 
 	// Pod from older version of this APISet should be retained
 	//+kubebuilder:default=false
-	KeepPreviousVersions *bool `json:"includePreviousVersions,omitempty"`
+	KeepPreviousVersions *bool `json:"keepPreviousVersions,omitempty"`
 }
 
 // Policies to retain historic pods
 type HistoryLimit struct {
-	Success HistoryLimitSpec `json:"success,omitempty"`
-	Failure HistoryLimitSpec `json:"failure,omitempty"`
+	Succeeded HistoryLimitSpec `json:"succeeded,omitempty"`
+	Failed    HistoryLimitSpec `json:"failed,omitempty"`
 }
 
 type API struct {
