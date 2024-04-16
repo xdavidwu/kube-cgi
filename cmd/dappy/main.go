@@ -30,51 +30,47 @@ func main() {
 	log := zap.New(zap.UseFlagOptions(&opts))
 	flag.Parse()
 
+	must := func(err error, op string) {
+		if err != nil {
+			log.Error(err, "cannot "+op)
+			panic(err)
+		}
+	}
+
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
-	if err != nil {
-		panic(err)
-	}
+	must(err, "listen for http")
 	promlisten, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIMetricsPort))
-	if err != nil {
-		panic(err)
-	}
+	must(err, "listen for metrics")
 	go http.Serve(promlisten, metrics.MetricHandler(log.WithName("metrics")))
 
 	config, err := config.GetConfig()
-	if err != nil {
-		panic(err)
-	}
+	must(err, "get kubeconfig")
 	oldClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
+	must(err, "create client-go client")
 
 	namespace := os.Getenv(internal.DAPIEnvAPISetNamespace)
 	apiSetName := os.Getenv(internal.DAPIEnvAPISetName)
 	apiSetVersion := os.Getenv(internal.DAPIEnvAPISetResourceVersion)
 
 	scheme := runtime.NewScheme()
-	clientgoscheme.AddToScheme(scheme)
-	fluorescencev1alpha1.AddToScheme(scheme)
+	must(clientgoscheme.AddToScheme(scheme), "register client-go scheme")
+	must(fluorescencev1alpha1.AddToScheme(scheme), "register our scheme")
 
 	// XXX WithWatch cannot be mixed with NewNamespacedClient yet
 	dynamicClient, err := client.NewWithWatch(config, client.Options{Scheme: scheme})
-	if err != nil {
-		panic(err)
-	}
+	must(err, "create controller-runtime client")
 
 	var apiSet fluorescencev1alpha1.APISet
-	dynamicClient.Get(
+	err = dynamicClient.Get(
 		context.Background(),
 		client.ObjectKey{Namespace: namespace, Name: apiSetName},
 		&apiSet,
 		&client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: apiSetVersion}},
 	)
+	must(err, "get apiset")
 
 	ref, err := kubedappy.OwnerReferenceOf(dynamicClient, &apiSet)
-	if err != nil {
-		panic(err)
-	}
+	must(err, "set up ownerreference")
 
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
@@ -108,5 +104,5 @@ func main() {
 	server := &http.Server{Handler: mux, BaseContext: func(net.Listener) context.Context {
 		return logr.NewContext(context.Background(), log)
 	}}
-	server.Serve(listen)
+	must(server.Serve(listen), "serve http")
 }
