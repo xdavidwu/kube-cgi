@@ -79,7 +79,7 @@ type DAPI struct {
 	//+kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// TODO consider what may be customized
+	Args []string `json:"args,omitempty"`
 
 	// Create monitoring.coreos.com/v1 ServiceMonitor for distributed API
 	// runtime metrics

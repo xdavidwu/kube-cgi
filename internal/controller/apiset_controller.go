@@ -88,6 +88,11 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		},
 	}
 
+	args := []string{}
+	if apiSet.Spec.DAPI != nil {
+		args = apiSet.Spec.Args
+	}
+
 	apiSetLabelValue := req.Namespace + "." + req.Name
 	deployment := appsv1.Deployment{
 		Spec: appsv1.DeploymentSpec{
@@ -103,6 +108,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 						{
 							Image: r.DAPIImage,
 							Name:  "dapi",
+							Args:  args,
 							Env: []corev1.EnvVar{
 								{
 									Name:  internal.DAPIEnvAPISetNamespace,
@@ -132,7 +138,6 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			},
 		},
 	}
-	// TODO defaulting webhook
 	if apiSet.Spec.DAPI != nil && *apiSet.Spec.DAPI.Replicas != 0 {
 		deployment.Spec.Replicas = apiSet.Spec.DAPI.Replicas
 	}

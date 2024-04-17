@@ -7024,6 +7024,10 @@ spec:
               dapi:
                 description: Deployment settings of the distributed API runtime
                 properties:
+                  args:
+                    items:
+                      type: string
+                    type: array
                   replicas:
                     default: 1
                     format: int32
