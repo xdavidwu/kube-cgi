@@ -12,6 +12,8 @@ import (
 )
 
 func cleanupOldGeneration(log logr.Logger, c client.Client, current *fluorescencev1alpha1.APISet) {
+	// deletion may race with other policy or instance, thus ignoring not found
+
 	var list corev1.PodList
 	err := c.List(context.Background(), &list,
 		client.InNamespace(current.Namespace),
@@ -28,8 +30,8 @@ func cleanupOldGeneration(log logr.Logger, c client.Client, current *fluorescenc
 			phase corev1.PodPhase
 			spec  *fluorescencev1alpha1.HistoryLimitSpec
 		}{
-			{corev1.PodSucceeded, &current.Spec.Succeeded},
-			{corev1.PodFailed, &current.Spec.Failed},
+			{corev1.PodSucceeded, &current.Spec.HistoryLimit.Succeeded},
+			{corev1.PodFailed, &current.Spec.HistoryLimit.Failed},
 		} {
 			if item.spec != nil && item.spec.KeepPreviousVersions != nil {
 				keep[item.phase] = *item.spec.KeepPreviousVersions
@@ -53,7 +55,7 @@ func cleanupOldGeneration(log logr.Logger, c client.Client, current *fluorescenc
 		}
 		log.Info("delete terminated pod of previous generation",
 			"pod", pod.Name, "generation", generation)
-		err = c.Delete(context.Background(), &pod)
+		err = client.IgnoreNotFound(c.Delete(context.Background(), &pod))
 		if err != nil {
 			log.Error(err, "cannot delete pod", "pod", pod.Name)
 		}
