@@ -7053,7 +7053,7 @@ spec:
                         type: integer
                       maxCount:
                         description: Retain at most this number of pods from current
-                          version TODO impl
+                          version. Defaults to 0 on succeeded, 5 on failed.
                         format: int32
                         type: integer
                     type: object
@@ -7073,7 +7073,7 @@ spec:
                         type: integer
                       maxCount:
                         description: Retain at most this number of pods from current
-                          version TODO impl
+                          version. Defaults to 0 on succeeded, 5 on failed.
                         format: int32
                         type: integer
                     type: object

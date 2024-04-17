@@ -34,8 +34,8 @@ type Response struct {
 
 // A Pod is retained when it statisfies all specified rules
 type HistoryLimitSpec struct {
-	// Retain at most this number of pods from current version
-	// TODO impl
+	// Retain at most this number of pods from current version.
+	// Defaults to 0 on succeeded, 5 on failed.
 	MaxCount *int32 `json:"maxCount,omitempty"`
 
 	// Retain pods from current version for at most this amount of seconds
