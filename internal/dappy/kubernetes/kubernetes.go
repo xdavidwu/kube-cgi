@@ -165,18 +165,6 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("dispatched pod", "name", pod.ObjectMeta.Name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)
-	defer func() {
-		// TODO channel a sophisticated GC on a fixed goroutine instead
-		must(h.Client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod), "get pod")
-		if pod.Status.ContainerStatuses != nil && pod.Status.ContainerStatuses[0].State.Terminated != nil {
-			info := pod.Status.ContainerStatuses[0].State.Terminated
-			log.Info("exited", "code", info.ExitCode, "signal", info.Signal, "reason", info.Reason, "message", info.Message)
-		}
-		log.Info("final pod phase", "phase", pod.Status.Phase)
-		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodPending {
-			must(h.Client.Delete(context.Background(), pod), "delete pod")
-		}
-	}()
 
 	var list corev1.PodList
 	watchOptions := []client.ListOption{
