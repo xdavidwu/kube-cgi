@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/middlewares"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/middlewares"
 )
 
 type promhttpLogrAdaptor struct {

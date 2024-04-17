@@ -33,7 +33,7 @@ func VarsFromRequest(r *http.Request) map[string]string {
 	res["REQUEST_METHOD"] = r.Method
 	res["SERVER_NAME"] = r.Host
 	res["SERVER_PROTOCOL"] = r.Proto
-	res["SERVER_SOFTWARE"] = "dappy"
+	res["SERVER_SOFTWARE"] = "cgid"
 
 	for k, vs := range r.Header {
 		res["HTTP_"+strings.ReplaceAll(strings.ToUpper(k), "-", "_")] = strings.Join(vs, ", ")

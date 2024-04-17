@@ -20,8 +20,8 @@ import (
 
 	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
 	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal"
-	kubedappy "git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/kubernetes"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/metrics"
+	kcgid "git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/kubernetes"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/metrics"
 	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/log"
 )
 
@@ -37,9 +37,9 @@ func main() {
 		}
 	}
 
-	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIPort))
+	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.KcgidPort))
 	must(err, "listen for http")
-	promlisten, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.DAPIMetricsPort))
+	promlisten, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", internal.KcgidMetricsPort))
 	must(err, "listen for metrics")
 	go http.Serve(promlisten, metrics.MetricHandler(log.WithName("metrics")))
 
@@ -48,9 +48,9 @@ func main() {
 	oldClient, err := kubernetes.NewForConfig(config)
 	must(err, "create client-go client")
 
-	namespace := os.Getenv(internal.DAPIEnvAPISetNamespace)
-	apiSetName := os.Getenv(internal.DAPIEnvAPISetName)
-	apiSetVersion := os.Getenv(internal.DAPIEnvAPISetResourceVersion)
+	namespace := os.Getenv(internal.KcgidEnvAPISetNamespace)
+	apiSetName := os.Getenv(internal.KcgidEnvAPISetName)
+	apiSetVersion := os.Getenv(internal.KcgidEnvAPISetResourceVersion)
 
 	scheme := runtime.NewScheme()
 	must(clientgoscheme.AddToScheme(scheme), "register client-go scheme")
@@ -69,14 +69,14 @@ func main() {
 	)
 	must(err, "get apiset")
 
-	ref, err := kubedappy.OwnerReferenceOf(dynamicClient, &apiSet)
+	ref, err := kcgid.OwnerReferenceOf(dynamicClient, &apiSet)
 	must(err, "set up ownerreference")
 
-	go kubedappy.CollectGarbage(log.WithName("gc"), dynamicClient, &apiSet)
+	go kcgid.CollectGarbage(log.WithName("gc"), dynamicClient, &apiSet)
 
 	mux := &http.ServeMux{}
 	for i := range apiSet.Spec.APIs {
-		mux.Handle(apiSet.Spec.APIs[i].Path, kubedappy.KubernetesHandler{
+		mux.Handle(apiSet.Spec.APIs[i].Path, kcgid.KubernetesHandler{
 			Client:         dynamicClient,
 			OldClient:      oldClient,
 			ClientConfig:   config,
@@ -87,7 +87,7 @@ func main() {
 		})
 	}
 
-	readinessHandler := http.StripPrefix(internal.DAPIReadinessEndpointPath, &healthz.Handler{
+	readinessHandler := http.StripPrefix(internal.KcgidReadinessEndpointPath, &healthz.Handler{
 		Checks: map[string]healthz.Checker{
 			"ping": healthz.Ping,
 			"apiserver": func(r *http.Request) error {
@@ -100,8 +100,8 @@ func main() {
 		},
 	})
 
-	mux.Handle(internal.DAPIReadinessEndpointPath, readinessHandler)
-	mux.Handle(internal.DAPIReadinessEndpointPath+"/", readinessHandler)
+	mux.Handle(internal.KcgidReadinessEndpointPath, readinessHandler)
+	mux.Handle(internal.KcgidReadinessEndpointPath+"/", readinessHandler)
 
 	server := &http.Server{Handler: mux, BaseContext: func(net.Listener) context.Context {
 		return logr.NewContext(context.Background(), log)

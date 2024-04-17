@@ -20,9 +20,9 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/cgi"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/middlewares"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/cgi"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/middlewares"
 )
 
 //+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
@@ -33,7 +33,7 @@ import (
 
 const (
 	managedByKey = "app.kubernetes.io/managed-by"
-	manager      = "dappy"
+	manager      = "cgid"
 )
 
 func watcherWithOpts(
@@ -121,11 +121,11 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := namify(h.Spec.Path)
-	input := dappy.BodyFromContext(ctx)
+	input := cgid.BodyFromContext(ctx)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: h.Namespace,
-			Name:      path + "-" + dappy.IdFromContext(ctx),
+			Name:      path + "-" + cgid.IdFromContext(ctx),
 			Labels: map[string]string{
 				managedByKey:  manager,
 				generationKey: strconv.FormatInt(h.Generation, 10),
@@ -136,7 +136,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Spec: *h.Spec.PodSpec.DeepCopy(),
 	}
 	for k, v := range cgi.VarsFromRequest(r) {
-		if dappy.EnvTooLarge(k, v) {
+		if cgid.EnvTooLarge(k, v) {
 			w.WriteHeader(http.StatusRequestHeaderFieldsTooLarge)
 			return
 		}
@@ -148,7 +148,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if input != nil {
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  dappy.BodyEnvKey,
+			Name:  cgid.BodyEnvKey,
 			Value: escapeKubernetesExpansion(string(input)),
 		})
 	} else {

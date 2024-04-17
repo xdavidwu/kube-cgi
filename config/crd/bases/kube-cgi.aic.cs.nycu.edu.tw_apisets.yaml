@@ -7021,23 +7021,6 @@ spec:
                   - podSpec
                   type: object
                 type: array
-              dapi:
-                description: Deployment settings of the distributed API runtime
-                properties:
-                  args:
-                    items:
-                      type: string
-                    type: array
-                  replicas:
-                    default: 1
-                    format: int32
-                    type: integer
-                  serviceMonitor:
-                    default: false
-                    description: Create monitoring.coreos.com/v1 ServiceMonitor for
-                      distributed API runtime metrics
-                    type: boolean
-                type: object
               historyLimit:
                 description: Policies to retain historic pods
                 properties:
@@ -7091,6 +7074,23 @@ spec:
                 description: The domain name this APISet should serve on
                 format: hostname
                 type: string
+              kcgid:
+                description: Deployment settings of the distributed API runtime
+                properties:
+                  args:
+                    items:
+                      type: string
+                    type: array
+                  replicas:
+                    default: 1
+                    format: int32
+                    type: integer
+                  serviceMonitor:
+                    default: false
+                    description: Create monitoring.coreos.com/v1 ServiceMonitor for
+                      distributed API runtime metrics
+                    type: boolean
+                type: object
             required:
             - apis
             - host

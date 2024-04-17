@@ -26,7 +26,7 @@ import (
 type APISetReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	DAPIImage  string
+	KcgidImage string
 	PullSecret *corev1.Secret
 }
 
@@ -42,7 +42,7 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;patch
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=create;patch
 
-// rbac in internal/dappy is also set on manager to be able to bind
+// rbac in internal/cgid is also set on manager to be able to bind
 
 const (
 	fieldManager     = "kube-cgi"
@@ -77,7 +77,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "kube-cgi-dappy",
+			Name:     "kube-cgi-cgid",
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -89,7 +89,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	args := []string{}
-	if apiSet.Spec.DAPI != nil {
+	if apiSet.Spec.Kcgid != nil {
 		args = apiSet.Spec.Args
 	}
 
@@ -106,20 +106,20 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Image: r.DAPIImage,
-							Name:  "dapi",
+							Image: r.KcgidImage,
+							Name:  "kcgid",
 							Args:  args,
 							Env: []corev1.EnvVar{
 								{
-									Name:  internal.DAPIEnvAPISetNamespace,
+									Name:  internal.KcgidEnvAPISetNamespace,
 									Value: req.Namespace,
 								},
 								{
-									Name:  internal.DAPIEnvAPISetName,
+									Name:  internal.KcgidEnvAPISetName,
 									Value: req.Name,
 								},
 								{
-									Name:  internal.DAPIEnvAPISetResourceVersion,
+									Name:  internal.KcgidEnvAPISetResourceVersion,
 									Value: apiSet.ObjectMeta.ResourceVersion,
 								},
 							},
@@ -127,7 +127,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/readyz",
-										Port: intstr.FromInt(internal.DAPIPort),
+										Port: intstr.FromInt(internal.KcgidPort),
 									},
 								},
 							},
@@ -138,8 +138,8 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			},
 		},
 	}
-	if apiSet.Spec.DAPI != nil && *apiSet.Spec.DAPI.Replicas != 0 {
-		deployment.Spec.Replicas = apiSet.Spec.DAPI.Replicas
+	if apiSet.Spec.Kcgid != nil && *apiSet.Spec.Kcgid.Replicas != 0 {
+		deployment.Spec.Replicas = apiSet.Spec.Kcgid.Replicas
 	}
 
 	service := corev1.Service{
@@ -151,11 +151,11 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				{
 					Name:       httpPortName,
 					Port:       80,
-					TargetPort: intstr.FromInt(internal.DAPIPort),
+					TargetPort: intstr.FromInt(internal.KcgidPort),
 				},
 				{
 					Name: metricsPortName,
-					Port: internal.DAPIMetricsPort,
+					Port: internal.KcgidMetricsPort,
 				},
 			},
 			Selector: map[string]string{apiSetKey: apiSetLabelValue},
@@ -220,7 +220,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		resources = append(resources, resource{secret, &apiSet.Status.ImagePullSecret})
 	}
 
-	if apiSet.Spec.DAPI != nil && apiSet.Spec.DAPI.ServiceMonitor {
+	if apiSet.Spec.Kcgid != nil && apiSet.Spec.Kcgid.ServiceMonitor {
 		serviceMonitor := monitoringv1.ServiceMonitor{
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{

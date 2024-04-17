@@ -161,7 +161,7 @@ patches:
                   - --health-probe-bind-address=:8081
                   - --metrics-bind-address=127.0.0.1:8080
                   - --leader-elect
-                  - --dapi-image=${CI_REGISTRY_IMAGE}/dappy:${CI_PIPELINE_ID}
+                  - --kcgid-image=${CI_REGISTRY_IMAGE}/cgid:${CI_PIPELINE_ID}
                   - --pull-secret=kube-cgi-system/gitlab-registry
             imagePullSecrets:
                   - name: gitlab-registry

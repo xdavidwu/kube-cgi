@@ -41,7 +41,7 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=256 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	$(CONTROLLER_GEN) rbac:roleName=dappy paths="./internal/dappy/..." output:stdout > config/rbac/dappy_clusterrole.yaml
+	$(CONTROLLER_GEN) rbac:roleName=kcgid paths="./internal/cgid/kubernetes/..." output:stdout > config/rbac/kcgid_clusterrole.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -64,7 +64,7 @@ test: fmt vet envtest ## Run tests.
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/manager/main.go
-	go build -o bin/dappy cmd/dappy/main.go
+	go build -o bin/kcgid cmd/kcgid/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

@@ -75,7 +75,7 @@ type API struct {
 }
 
 // Deployment settings of the distributed API runtime
-type DAPI struct {
+type Kcgid struct {
 	//+kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
@@ -96,7 +96,7 @@ type APISetSpec struct {
 	// The APIs to host under the specified domain name
 	APIs []API `json:"apis"`
 
-	*DAPI `json:"dapi,omitempty"`
+	*Kcgid `json:"kcgid,omitempty"`
 
 	// Hoist the images onto nodes with DaemonSets
 	// The image is expected to contain a `true` command

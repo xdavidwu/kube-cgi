@@ -11,7 +11,7 @@ import (
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	"k8s.io/apimachinery/pkg/util/rand"
 
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid"
 )
 
 var (
@@ -51,7 +51,7 @@ func DrainBody(next http.Handler) http.Handler {
 		var err error
 		if r.ContentLength == -1 {
 			log.Info("missing content-length in request, not draining")
-		} else if r.ContentLength > int64(dappy.BodyEnvMaxSize) {
+		} else if r.ContentLength > int64(cgid.BodyEnvMaxSize) {
 			log.Info("request body too large for env, not draining")
 		} else {
 			bytes, err = io.ReadAll(http.MaxBytesReader(w, r.Body, r.ContentLength))
@@ -61,14 +61,14 @@ func DrainBody(next http.Handler) http.Handler {
 			}
 		}
 
-		next.ServeHTTP(w, r.WithContext(dappy.ContextWithBody(
+		next.ServeHTTP(w, r.WithContext(cgid.ContextWithBody(
 			r.Context(), bytes)))
 	})
 }
 
 func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes := dappy.BodyFromContext(r.Context())
+		bytes := cgid.BodyFromContext(r.Context())
 		if bytes == nil {
 			log := logr.FromContextOrDiscard(r.Context())
 			log.Info("json not validated due to body not drained")
@@ -79,14 +79,14 @@ func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler
 		var v interface{}
 		if json.Unmarshal(bytes, &v) != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			msg := dappy.ErrorResponse{Message: "request body is not json"}
+			msg := cgid.ErrorResponse{Message: "request body is not json"}
 			body, _ := json.Marshal(msg)
 			w.Write(body)
 			return
 		}
 		if err := jsonSchema.Validate(v); err != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			msg := dappy.ErrorResponse{Message: err.Error()}
+			msg := cgid.ErrorResponse{Message: err.Error()}
 			body, _ := json.Marshal(msg)
 			w.Write(body)
 			return
@@ -99,7 +99,7 @@ func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler
 func LogWithIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := rand.String(5)
-		ctx := dappy.ContextWithId(r.Context(), id)
+		ctx := cgid.ContextWithId(r.Context(), id)
 		log := logr.FromContextOrDiscard(ctx).WithName(id)
 		ctx = logr.NewContext(ctx, log)
 

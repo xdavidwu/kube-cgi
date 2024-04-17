@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/cgi"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/cgi"
 )
 
 func TestResponseGoCompatibility(t *testing.T) {

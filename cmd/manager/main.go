@@ -45,20 +45,20 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var dapiImage string
+	var kcgidImage string
 	var pullSecretRef string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&dapiImage, "dapi-image", "", "DAPI image to use.")
-	flag.StringVar(&pullSecretRef, "pull-secret", "", "namespace/name of imagePullSecret for DAPI image")
+	flag.StringVar(&kcgidImage, "kcgid-image", "", "kcgid image to use.")
+	flag.StringVar(&pullSecretRef, "pull-secret", "", "namespace/name of imagePullSecret for kcgid image")
 	opts := log.BuildZapOptions(flag.CommandLine)
 	flag.Parse()
 
-	if dapiImage == "" {
-		panic("DAPI image not set")
+	if kcgidImage == "" {
+		panic("kcgid image not set")
 	}
 
 	logger := zap.New(zap.UseFlagOptions(&opts))
@@ -114,7 +114,7 @@ func main() {
 	if err = (&controller.APISetReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
-		DAPIImage:  dapiImage,
+		KcgidImage: kcgidImage,
 		PullSecret: pullSecret,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "APISet")

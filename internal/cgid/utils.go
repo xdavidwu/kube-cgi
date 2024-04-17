@@ -1,4 +1,4 @@
-package dappy
+package cgid
 
 import (
 	"context"
