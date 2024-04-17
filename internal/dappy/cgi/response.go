@@ -51,6 +51,6 @@ func WriteResponse(w http.ResponseWriter, r io.Reader) (string, error) {
 		}
 	}
 	w.WriteHeader(code)
-	io.Copy(w, lines) // TODO bubble up errors?
-	return "", nil
+	_, err = io.Copy(w, lines)
+	return "", err
 }
