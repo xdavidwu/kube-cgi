@@ -1,0 +1,12 @@
+name: test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: alpine:edge
+    steps:
+      - uses: actions/checkout@v3
+      - name: prepare
+        run: apk add make bash go
+      - name: test
+        run: make test
