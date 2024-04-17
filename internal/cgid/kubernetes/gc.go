@@ -12,7 +12,7 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
+	kubecgiv1alpha1 "github.com/xdavidwu/kube-cgi/api/v1alpha1"
 )
 
 func cleanupOldGeneration(log logr.Logger, c client.Client, current *kubecgiv1alpha1.APISet) {

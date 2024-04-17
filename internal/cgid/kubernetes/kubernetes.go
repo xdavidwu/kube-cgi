@@ -20,9 +20,9 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/cgi"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/middlewares"
+	"github.com/xdavidwu/kube-cgi/internal/cgid"
+	"github.com/xdavidwu/kube-cgi/internal/cgid/cgi"
+	"github.com/xdavidwu/kube-cgi/internal/cgid/middlewares"
 )
 
 //+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets,verbs=get

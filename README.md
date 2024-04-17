@@ -1,6 +1,6 @@
 # kube-cgi
 
-[WIP] Distributed Container-based Web API Platform
+Containerized CGI implementation for Kubernetes
 
 ## Description
 

@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal"
+	kubecgiv1alpha1 "github.com/xdavidwu/kube-cgi/api/v1alpha1"
+	"github.com/xdavidwu/kube-cgi/internal"
 )
 
 // APISetReconciler reconciles a APISet object

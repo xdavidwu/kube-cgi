@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/controller"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/log"
+	kubecgiv1alpha1 "github.com/xdavidwu/kube-cgi/api/v1alpha1"
+	"github.com/xdavidwu/kube-cgi/internal/controller"
+	"github.com/xdavidwu/kube-cgi/internal/log"
 	//+kubebuilder:scaffold:imports
 )
 

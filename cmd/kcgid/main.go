@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal"
-	kcgid "git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/kubernetes"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/cgid/metrics"
-	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/log"
+	kubecgiv1alpha1 "github.com/xdavidwu/kube-cgi/api/v1alpha1"
+	"github.com/xdavidwu/kube-cgi/internal"
+	kcgid "github.com/xdavidwu/kube-cgi/internal/cgid/kubernetes"
+	"github.com/xdavidwu/kube-cgi/internal/cgid/metrics"
+	"github.com/xdavidwu/kube-cgi/internal/log"
 )
 
 func main() {
