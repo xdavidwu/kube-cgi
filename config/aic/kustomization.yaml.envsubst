@@ -1,12 +1,12 @@
 # Adds namespace to all resources.
-namespace: fluorescence-system
+namespace: kube-cgi-system
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
 # "wordpress" becomes "alices-wordpress".
 # Note that it should also match with the prefix (text before '-') of the namespace
 # field above.
-namePrefix: fluorescence-
+namePrefix: kube-cgi-
 
 # Labels to add to all resources and selectors.
 #labels:
@@ -162,7 +162,7 @@ patches:
                   - --metrics-bind-address=127.0.0.1:8080
                   - --leader-elect
                   - --dapi-image=${CI_REGISTRY_IMAGE}/dappy:${CI_PIPELINE_ID}
-                  - --pull-secret=fluorescence-system/gitlab-registry
+                  - --pull-secret=kube-cgi-system/gitlab-registry
             imagePullSecrets:
                   - name: gitlab-registry
 

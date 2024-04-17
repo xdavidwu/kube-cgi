@@ -21,7 +21,7 @@ func (r *APISet) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/validate-fluorescence-aic-cs-nycu-edu-tw-v1alpha1-apiset,mutating=false,failurePolicy=fail,sideEffects=None,groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=create;update,versions=v1alpha1,name=vapiset.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-kube-cgi-aic-cs-nycu-edu-tw-v1alpha1-apiset,mutating=false,failurePolicy=fail,sideEffects=None,groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets,verbs=create;update,versions=v1alpha1,name=vapiset.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &APISet{}
 

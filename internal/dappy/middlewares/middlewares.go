@@ -11,7 +11,7 @@ import (
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	"k8s.io/apimachinery/pkg/util/rand"
 
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy"
 )
 
 var (

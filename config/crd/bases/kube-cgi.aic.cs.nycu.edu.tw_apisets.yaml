@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: apisets.fluorescence.aic.cs.nycu.edu.tw
+  name: apisets.kube-cgi.aic.cs.nycu.edu.tw
 spec:
-  group: fluorescence.aic.cs.nycu.edu.tw
+  group: kube-cgi.aic.cs.nycu.edu.tw
   names:
     kind: APISet
     listKind: APISetList

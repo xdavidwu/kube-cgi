@@ -1,4 +1,4 @@
-module git.cs.nctu.edu.tw/aic/infra/fluorescence
+module git.cs.nctu.edu.tw/aic/infra/kube-cgi
 
 go 1.21
 

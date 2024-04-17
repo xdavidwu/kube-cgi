@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/cgi"
 )
 
 func TestRequestGoCompatibility(t *testing.T) {

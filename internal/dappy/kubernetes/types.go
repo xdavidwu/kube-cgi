@@ -6,12 +6,12 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
+	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
 )
 
 var (
-	generationKey = fluorescencev1alpha1.GroupVersion.Group + "/generation"
-	pathKey       = fluorescencev1alpha1.GroupVersion.Group + "/path"
+	generationKey = kubecgiv1alpha1.GroupVersion.Group + "/generation"
+	pathKey       = kubecgiv1alpha1.GroupVersion.Group + "/path"
 )
 
 type KubernetesHandler struct {
@@ -19,7 +19,7 @@ type KubernetesHandler struct {
 	OldClient      *kubernetes.Clientset
 	ClientConfig   *rest.Config
 	Namespace      string
-	Spec           *fluorescencev1alpha1.API
+	Spec           *kubecgiv1alpha1.API
 	OwnerReference metav1.OwnerReference
 	Generation     int64
 }

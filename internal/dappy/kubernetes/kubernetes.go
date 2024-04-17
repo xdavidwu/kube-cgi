@@ -20,12 +20,12 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/cgi"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/middlewares"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/cgi"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/middlewares"
 )
 
-//+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
+//+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
 //+kubebuilder:rbac:groups="",resources=pods,verbs=*
 //+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 //+kubebuilder:rbac:groups="",resources=pods/attach,verbs=create

@@ -1,4 +1,4 @@
 ## Append samples of your project ##
 resources:
-- fluorescence_v1alpha1_apiset.yaml
+- kube-cgi_v1alpha1_apiset.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

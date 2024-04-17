@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/controller"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/log"
+	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/controller"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/log"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -37,7 +37,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 
-	utilruntime.Must(fluorescencev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kubecgiv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -121,7 +121,7 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&fluorescencev1alpha1.APISet{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&kubecgiv1alpha1.APISet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "APISet")
 			os.Exit(1)
 		}

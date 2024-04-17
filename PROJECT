@@ -5,17 +5,17 @@
 domain: aic.cs.nycu.edu.tw
 layout:
 - go.kubebuilder.io/v4
-projectName: fluorescence
-repo: git.cs.nctu.edu.tw/aic/infra/fluorescence
+projectName: kube-cgi
+repo: git.cs.nctu.edu.tw/aic/infra/kube-cgi
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: aic.cs.nycu.edu.tw
-  group: fluorescence
+  group: kube-cgi
   kind: APISet
-  path: git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1
+  path: git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true

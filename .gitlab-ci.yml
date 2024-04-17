@@ -48,4 +48,4 @@ deploy:
       kubectl create secret docker-registry gitlab-registry \
         --docker-server="$CI_REGISTRY" --docker-username="$CI_DEPLOY_USER" \
         --docker-password="$CI_DEPLOY_PASSWORD" --dry-run=client -o yaml \
-        | kubectl -n fluorescence-system apply -f -
+        | kubectl -n kube-cgi-system apply -f -

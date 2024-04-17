@@ -10,12 +10,12 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-fluorescence-aic-cs-nycu-edu-tw-v1alpha1-apiset
+      path: /validate-kube-cgi-aic-cs-nycu-edu-tw-v1alpha1-apiset
   failurePolicy: Fail
   name: vapiset.kb.io
   rules:
   - apiGroups:
-    - fluorescence.aic.cs.nycu.edu.tw
+    - kube-cgi.aic.cs.nycu.edu.tw
     apiVersions:
     - v1alpha1
     operations:

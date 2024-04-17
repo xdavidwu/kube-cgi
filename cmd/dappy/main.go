@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
-	kubedappy "git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/kubernetes"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/dappy/metrics"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal/log"
+	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal"
+	kubedappy "git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/kubernetes"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/dappy/metrics"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal/log"
 )
 
 func main() {
@@ -54,13 +54,13 @@ func main() {
 
 	scheme := runtime.NewScheme()
 	must(clientgoscheme.AddToScheme(scheme), "register client-go scheme")
-	must(fluorescencev1alpha1.AddToScheme(scheme), "register our scheme")
+	must(kubecgiv1alpha1.AddToScheme(scheme), "register our scheme")
 
 	// XXX WithWatch cannot be mixed with NewNamespacedClient yet
 	dynamicClient, err := client.NewWithWatch(config, client.Options{Scheme: scheme})
 	must(err, "create controller-runtime client")
 
-	var apiSet fluorescencev1alpha1.APISet
+	var apiSet kubecgiv1alpha1.APISet
 	err = dynamicClient.Get(
 		context.Background(),
 		client.ObjectKey{Namespace: namespace, Name: apiSetName},

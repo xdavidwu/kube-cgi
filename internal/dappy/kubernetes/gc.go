@@ -12,10 +12,10 @@ import (
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
+	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
 )
 
-func cleanupOldGeneration(log logr.Logger, c client.Client, current *fluorescencev1alpha1.APISet) {
+func cleanupOldGeneration(log logr.Logger, c client.Client, current *kubecgiv1alpha1.APISet) {
 	// deletion may race with other policy or instance, thus ignoring not found
 
 	var list corev1.PodList
@@ -32,7 +32,7 @@ func cleanupOldGeneration(log logr.Logger, c client.Client, current *fluorescenc
 	if current.Spec.HistoryLimit != nil {
 		for _, item := range []struct {
 			phase corev1.PodPhase
-			spec  *fluorescencev1alpha1.HistoryLimitSpec
+			spec  *kubecgiv1alpha1.HistoryLimitSpec
 		}{
 			{corev1.PodSucceeded, &current.Spec.HistoryLimit.Succeeded},
 			{corev1.PodFailed, &current.Spec.HistoryLimit.Failed},
@@ -132,7 +132,7 @@ func deleteUnlessLastN(log logr.Logger, c client.WithWatch, n int32, listOpts ..
 	}
 }
 
-func CollectGarbage(log logr.Logger, c client.WithWatch, apiset *fluorescencev1alpha1.APISet) {
+func CollectGarbage(log logr.Logger, c client.WithWatch, apiset *kubecgiv1alpha1.APISet) {
 	cleanupOldGeneration(log.WithValues("policy", "previousVersions"), c, apiset)
 
 	lastNPolicy := map[corev1.PodPhase]int32{
@@ -143,7 +143,7 @@ func CollectGarbage(log logr.Logger, c client.WithWatch, apiset *fluorescencev1a
 	if apiset.Spec.HistoryLimit != nil {
 		for _, item := range []struct {
 			phase corev1.PodPhase
-			spec  *fluorescencev1alpha1.HistoryLimitSpec
+			spec  *kubecgiv1alpha1.HistoryLimitSpec
 		}{
 			{corev1.PodSucceeded, &apiset.Spec.HistoryLimit.Succeeded},
 			{corev1.PodFailed, &apiset.Spec.HistoryLimit.Failed},

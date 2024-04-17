@@ -1,4 +1,4 @@
-# fluorescence
+# kube-cgi
 
 [WIP] Distributed Container-based Web API Platform
 
@@ -20,13 +20,13 @@ kubectl apply -k config/samples/
 2. Build and push your image to the location specified by `IMG`:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/fluorescence:tag
+make docker-build docker-push IMG=<some-registry>/kube-cgi:tag
 ```
 
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/fluorescence:tag
+make deploy IMG=<some-registry>/kube-cgi:tag
 ```
 
 ### Uninstall CRDs

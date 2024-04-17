@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	fluorescencev1alpha1 "git.cs.nctu.edu.tw/aic/infra/fluorescence/api/v1alpha1"
-	"git.cs.nctu.edu.tw/aic/infra/fluorescence/internal"
+	kubecgiv1alpha1 "git.cs.nctu.edu.tw/aic/infra/kube-cgi/api/v1alpha1"
+	"git.cs.nctu.edu.tw/aic/infra/kube-cgi/internal"
 )
 
 // APISetReconciler reconciles a APISet object
@@ -30,9 +30,9 @@ type APISetReconciler struct {
 	PullSecret *corev1.Secret
 }
 
-//+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=fluorescence.aic.cs.nycu.edu.tw,resources=apisets/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets/finalizers,verbs=update
 
 //+kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=create;patch
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=create;patch
@@ -45,7 +45,7 @@ type APISetReconciler struct {
 // rbac in internal/dappy is also set on manager to be able to bind
 
 const (
-	fieldManager     = "fluorescence"
+	fieldManager     = "kube-cgi"
 	managedByKey     = "app.kubernetes.io/managed-by"
 	managedByManager = fieldManager
 	metricsPortName  = "metrics"
@@ -53,7 +53,7 @@ const (
 )
 
 var (
-	apiSetKey = fluorescencev1alpha1.GroupVersion.Group + "/apiset"
+	apiSetKey = kubecgiv1alpha1.GroupVersion.Group + "/apiset"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -64,7 +64,7 @@ var (
 func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	var apiSet fluorescencev1alpha1.APISet
+	var apiSet kubecgiv1alpha1.APISet
 	err := r.Get(ctx, req.NamespacedName, &apiSet)
 	if err != nil {
 		log.Error(err, "cannot get requested APISet")
@@ -77,7 +77,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "fluorescence-dappy",
+			Name:     "kube-cgi-dappy",
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -291,7 +291,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 // SetupWithManager sets up the controller with the Manager.
 func (r *APISetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&fluorescencev1alpha1.APISet{},
+		For(&kubecgiv1alpha1.APISet{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
