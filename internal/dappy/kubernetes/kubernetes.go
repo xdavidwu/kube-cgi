@@ -233,6 +233,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 	}
+	log.Info("ready for streaming response")
 
 	// XXX dynamic client supports only CRUD subresources
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
@@ -248,6 +249,8 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Error(err, "cannnot proxy cgi response")
+	} else {
+		log.Info("response streamed")
 	}
 }
 
