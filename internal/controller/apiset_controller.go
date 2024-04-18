@@ -77,7 +77,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "kube-cgi-cgid",
+			Name:     "kube-cgi-kcgid",
 		},
 		Subjects: []rbacv1.Subject{
 			{
