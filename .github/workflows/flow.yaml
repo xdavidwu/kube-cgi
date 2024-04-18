@@ -14,4 +14,4 @@ jobs:
       packages: write
     with:
       import_path: ${{ matrix.import_path }}
-      tag: ${{ github.ref_type == 'tag' && format('{0},latest', github.ref_name) || 'unstable' }}
+      tag: ${{ github.ref_type == 'tag' && format('{0},latest', github.ref_name) || format('unstable-{0}-{1},unstable', github.sha, github.run_number) }}
