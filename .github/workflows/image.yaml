@@ -1,0 +1,29 @@
+name: image
+on:
+  workflow_call:
+    inputs:
+      import_path:
+        required: true
+        type: string
+      tag:
+        default: unstable
+        type: string
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    container: alpine:edge
+    permissions:
+      packages: write
+    env:
+      CGO_ENABLED: '0'
+      KO_DOCKER_REPO: ghcr.io/xdavidwu/kube-cgi
+    steps:
+      - uses: actions/checkout@v3
+      - name: prepare
+        run: |
+          echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
+          apk add ko go
+      - name: login
+        run: ko login ghcr.io -u dummy -p "${{ github.token }}"
+      - name: package
+        run: ko build -B -t "${{ inputs.tag }}" "${{ inputs.import_path }}"

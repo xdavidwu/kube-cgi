@@ -1,0 +1,16 @@
+name: flow
+on: push
+jobs:
+  test:
+    uses: ./.github/workflows/test.yaml
+  image:
+    needs: [test]
+    if: ${{ github.ref == 'refs/heads/main' }}
+    strategy:
+      matrix:
+        import_path: [./cmd/manager, ./cmd/kcgid]
+    uses: ./.github/workflows/image.yaml
+    permissions:
+      packages: write
+    with:
+      import_path: ${{ matrix.import_path }}
