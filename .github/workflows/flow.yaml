@@ -5,7 +5,7 @@ jobs:
     uses: ./.github/workflows/test.yaml
   image:
     needs: [test]
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref_type == 'tag' || github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
         import_path: [./cmd/manager, ./cmd/kcgid]
@@ -14,3 +14,4 @@ jobs:
       packages: write
     with:
       import_path: ${{ matrix.import_path }}
+      tag: ${{ github.ref_type == 'tag' && format('{0},latest', github.ref_name) || 'unstable' }}
