@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/created-by: kube-cgi
     app.kubernetes.io/part-of: kube-cgi
     app.kubernetes.io/managed-by: kustomize
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
   name: apiset-viewer-role
 rules:
 - apiGroups:
