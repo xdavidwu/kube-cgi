@@ -37,28 +37,36 @@ rules:
   verbs:
   - create
   - get
+  - list
   - patch
+  - watch
 - apiGroups:
   - ""
   resources:
   - serviceaccounts
   verbs:
   - create
+  - list
   - patch
+  - watch
 - apiGroups:
   - ""
   resources:
   - services
   verbs:
   - create
+  - list
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
   - deployments
   verbs:
   - create
+  - list
   - patch
+  - watch
 - apiGroups:
   - kube-cgi.aic.cs.nycu.edu.tw
   resources:
@@ -98,11 +106,15 @@ rules:
   - ingresses
   verbs:
   - create
+  - list
   - patch
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
   verbs:
   - create
+  - list
   - patch
+  - watch

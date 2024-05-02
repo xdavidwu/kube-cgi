@@ -34,12 +34,12 @@ type APISetReconciler struct {
 //+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets/finalizers,verbs=update
 
-//+kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=create;patch
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=create;patch
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;patch
-//+kubebuilder:rbac:groups="",resources=services,verbs=create;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=create;patch
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;patch
+//+kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=list;watch;create;patch
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=list;watch;create;patch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=list;watch;create;patch
+//+kubebuilder:rbac:groups="",resources=services,verbs=list;watch;create;patch
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=list;watch;create;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;get;create;patch
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=create;patch
 
 // rbac in internal/cgid is also set on manager to be able to bind
