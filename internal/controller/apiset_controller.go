@@ -296,7 +296,7 @@ func (r *APISetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.RoleBinding{}).
-		Owns(&appsv1.Deployment{}).
+		// Owns(&appsv1.Deployment{}). loops since we ref resourceVersion in spec
 		Owns(&corev1.Service{}).
 		Owns(&networkingv1.Ingress{}).
 		Owns(&corev1.Secret{}).
