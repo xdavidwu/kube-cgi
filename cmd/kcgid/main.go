@@ -7,9 +7,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -50,7 +50,7 @@ func main() {
 
 	namespace := os.Getenv(internal.KcgidEnvAPISetNamespace)
 	apiSetName := os.Getenv(internal.KcgidEnvAPISetName)
-	apiSetVersion := os.Getenv(internal.KcgidEnvAPISetResourceVersion)
+	apiSetGeneration, _ := strconv.ParseInt(os.Getenv(internal.KcgidEnvAPISetGeneration), 10, 0)
 
 	scheme := runtime.NewScheme()
 	must(clientgoscheme.AddToScheme(scheme), "register client-go scheme")
@@ -65,9 +65,13 @@ func main() {
 		context.Background(),
 		client.ObjectKey{Namespace: namespace, Name: apiSetName},
 		&apiSet,
-		&client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: apiSetVersion}},
 	)
 	must(err, "get apiset")
+
+	if apiSet.Generation < apiSetGeneration {
+		log.Error(nil, "stale APISet obtained", "generation", apiSet.Generation, "expected", apiSetGeneration)
+		panic("stale APISet obtained")
+	}
 
 	ref, err := kcgid.OwnerReferenceOf(dynamicClient, &apiSet)
 	must(err, "set up ownerreference")

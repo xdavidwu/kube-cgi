@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -119,8 +120,8 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 									Value: req.Name,
 								},
 								{
-									Name:  internal.KcgidEnvAPISetResourceVersion,
-									Value: apiSet.ObjectMeta.ResourceVersion,
+									Name:  internal.KcgidEnvAPISetGeneration,
+									Value: strconv.FormatInt(apiSet.ObjectMeta.Generation, 10),
 								},
 							},
 							ReadinessProbe: &corev1.Probe{
@@ -296,7 +297,7 @@ func (r *APISetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.RoleBinding{}).
-		// Owns(&appsv1.Deployment{}). loops since we ref resourceVersion in spec
+		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&networkingv1.Ingress{}).
 		Owns(&corev1.Secret{}).
