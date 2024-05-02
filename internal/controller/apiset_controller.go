@@ -68,7 +68,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	err := r.Get(ctx, req.NamespacedName, &apiSet)
 	if err != nil {
 		log.Error(err, "cannot get requested APISet")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	serviceAccount := corev1.ServiceAccount{}
