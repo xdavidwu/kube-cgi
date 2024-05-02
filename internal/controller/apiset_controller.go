@@ -290,8 +290,15 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *APISetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// TODO also watch servicemonitor if supported
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kubecgiv1alpha1.APISet{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&rbacv1.RoleBinding{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		Owns(&networkingv1.Ingress{}).
+		Owns(&corev1.Secret{}).
 		Complete(r)
 }
