@@ -240,7 +240,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	defer func() {
 		err2 := r.Status().Update(ctx, &apiSet)
 		if err2 != nil {
-			log.Error(err, "cannot update status", "APISet", apiSet)
+			log.Error(err2, "cannot update status", "status", apiSet.Status)
 		}
 		if err == nil {
 			err = err2
