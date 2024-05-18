@@ -107,7 +107,11 @@ func deleteUnlessLastN(log logr.Logger, c client.WithWatch, n int32, listOpts ..
 	}
 	results := watcher.ResultChan()
 	for {
-		ev := <-results
+		ev, ok := <-results
+		if !ok {
+			log.Error(nil, "watch channel closed")
+			panic("watch channel closed")
+		}
 		if ev.Type == watch.Added {
 			if q == nil {
 				pod := ev.Object.(*corev1.Pod)
