@@ -6,11 +6,11 @@ jobs:
     container: alpine:edge
     steps:
       - uses: actions/checkout@v4
+      - name: prepare
+        run: apk add make bash go tar
       - uses: actions/cache@v4
         with:
           path: ~/go/pkg
           key: go-pkg
-      - name: prepare
-        run: apk add make bash go
       - name: test
         run: make test
