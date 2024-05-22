@@ -19,6 +19,10 @@ jobs:
       KO_DOCKER_REPO: ghcr.io/xdavidwu/kube-cgi
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/go/pkg
+          key: go-pkg
       - name: prepare
         run: |
           echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
