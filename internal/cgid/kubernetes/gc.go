@@ -163,7 +163,7 @@ func CollectGarbage(log logr.Logger, c client.WithWatch, apiset *kubecgiv1alpha1
 		go deleteUnlessLastN(
 			log.WithValues("for", phase, "policy", "maxCount", "maxCount", n),
 			c, n,
-			client.InNamespace(apiset.Name),
+			client.InNamespace(apiset.Namespace),
 			client.MatchingLabels{managedByKey: manager},
 			client.MatchingLabels{generationKey: gen},
 			client.MatchingFields{"status.phase": string(phase)})
