@@ -1,0 +1,26 @@
+apiVersion: kube-cgi.aic.cs.nycu.edu.tw/v1alpha1
+kind: APISet
+metadata:
+  labels:
+    app.kubernetes.io/name: apiset
+    app.kubernetes.io/instance: apiset-sample
+    app.kubernetes.io/part-of: kube-cgi
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kube-cgi
+  name: apiset-sample
+spec:
+  host: example.local
+  apis:
+    - path: /api/v1/rev
+      podSpec:
+        containers:
+          - name: rev
+            image: alpine:latest
+            args:
+              - sh
+              - -c
+              - |
+                printf 'Content-Type: %s\n\n' "${CONTENT_TYPE:-application/octect-stream}" && rev
+            stdin: true
+            stdinOnce: true
+        restartPolicy: Never
