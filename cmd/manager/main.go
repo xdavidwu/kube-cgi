@@ -52,7 +52,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&kcgidImage, "kcgid-image", "ghcr.io/xdavidwu/kube-cgi", "kcgid image to use.")
+	flag.StringVar(&kcgidImage, "kcgid-image", "ghcr.io/xdavidwu/kube-cgi/kcgid", "kcgid image to use.")
 	flag.StringVar(&pullSecretRef, "pull-secret", "", "namespace/name of imagePullSecret for kcgid image")
 	opts := log.BuildZapOptions(flag.CommandLine)
 	flag.Parse()
