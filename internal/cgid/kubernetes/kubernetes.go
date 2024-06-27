@@ -12,8 +12,11 @@ import (
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/remotecommand"
@@ -162,6 +165,23 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err := h.Client.Create(context.Background(), pod)
 	must(err, "create pod")
+	defer func() {
+		go func() {
+			patch := corev1ac.Pod(pod.Name, pod.Namespace).
+				WithLabels(map[string]string{gcKey: "true"})
+			u := unstructured.Unstructured{}
+			u.Object, err = runtime.DefaultUnstructuredConverter.ToUnstructured(patch)
+			if err != nil {
+				log.Error(err, "cannot prepare patch")
+				return
+			}
+			err = h.Client.Patch(context.Background(), &u, client.Apply, client.ForceOwnership, client.FieldOwner(manager))
+			if err != nil {
+				log.Error(err, "cannot apply patch")
+				return
+			}
+		}()
+	}()
 
 	log.Info("dispatched pod", "name", pod.ObjectMeta.Name)
 	go logEventsForPod(ctx, h.Client, h.Namespace, pod.ObjectMeta.UID)

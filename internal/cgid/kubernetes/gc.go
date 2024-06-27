@@ -21,6 +21,7 @@ func cleanupOldGeneration(log logr.Logger, c client.Client, current *kubecgiv1al
 	var list corev1.PodList
 	err := c.List(context.Background(), &list,
 		client.InNamespace(current.Namespace),
+		client.MatchingLabels{gcKey: "true"},
 		client.MatchingLabels{managedByKey: manager})
 	if err != nil {
 		log.Error(err, "cannot list pods")
@@ -166,6 +167,7 @@ func CollectGarbage(log logr.Logger, c client.WithWatch, apiset *kubecgiv1alpha1
 			client.InNamespace(apiset.Namespace),
 			client.MatchingLabels{managedByKey: manager},
 			client.MatchingLabels{generationKey: gen},
+			client.MatchingLabels{gcKey: "true"},
 			client.MatchingFields{"status.phase": string(phase)})
 	}
 }

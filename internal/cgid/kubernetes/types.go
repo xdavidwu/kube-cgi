@@ -12,6 +12,7 @@ import (
 var (
 	generationKey = kubecgiv1alpha1.GroupVersion.Group + "/generation"
 	pathKey       = kubecgiv1alpha1.GroupVersion.Group + "/path"
+	gcKey         = kubecgiv1alpha1.GroupVersion.Group + "/released"
 )
 
 type KubernetesHandler struct {
