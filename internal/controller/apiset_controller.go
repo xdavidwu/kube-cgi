@@ -68,8 +68,11 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	var apiSet kubecgiv1alpha1.APISet
 	err := r.Get(ctx, req.NamespacedName, &apiSet)
 	if err != nil {
-		log.Error(err, "cannot get requested APISet")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		err = client.IgnoreNotFound(err)
+		if err != nil {
+			log.Error(err, "cannot get requested APISet")
+		}
+		return ctrl.Result{}, err
 	}
 
 	serviceAccount := corev1.ServiceAccount{}
