@@ -4,7 +4,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
+)
+
+var (
+	wildcardRegexp = regexp.MustCompile("{([^$\\.}]+)(\\.\\.\\.)?}")
 )
 
 func VarsFromRequest(r *http.Request) map[string]string {
@@ -43,5 +48,10 @@ func VarsFromRequest(r *http.Request) map[string]string {
 	res["REQUEST_URI"] = r.URL.RequestURI()
 	res["REMOTE_PORT"] = port
 
+	// our own stuff
+	for _, m := range wildcardRegexp.FindAllStringSubmatch(r.Pattern, -1) {
+		w := m[1]
+		res["PATH_VALUE_"+strings.ToUpper(w)] = r.PathValue(w)
+	}
 	return res
 }
