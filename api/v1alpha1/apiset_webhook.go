@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"net/http"
+
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,15 +48,37 @@ func (r *APISet) ValidateDelete() (admission.Warnings, error) {
 	return nil, nil
 }
 
+var fakeHandleFunc = func(_ http.ResponseWriter, _ *http.Request) {}
+
+func tryRegisterPattern(s *http.ServeMux, p string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = e.(error)
+		}
+	}()
+	s.HandleFunc(p, fakeHandleFunc)
+	return
+}
+
 func (r APISet) validate() (admission.Warnings, error) {
+	tMux := &http.ServeMux{}
 	errs := []*field.Error{}
+	path := field.NewPath("spec", "apis")
 	for i, api := range r.Spec.APIs {
-		path := field.NewPath("spec", "apis")
+		p := path.Index(i)
+		if err := tryRegisterPattern(tMux, api.Path); err != nil {
+			errs = append(errs, field.Invalid(
+				p.Child("path"),
+				api.Path,
+				err.Error(),
+			))
+		}
+
 		if api.Request != nil && api.Request.Schema != nil {
 			_, err := jsonschema.CompileString("api.schema.json", api.Request.Schema.RawJSON)
 			if err != nil {
 				errs = append(errs, field.Invalid(
-					path.Index(i).Child("request", "schema"),
+					p.Child("request", "schema"),
 					api.Request.Schema.RawJSON,
 					err.(*jsonschema.SchemaError).Unwrap().Error(),
 				))
