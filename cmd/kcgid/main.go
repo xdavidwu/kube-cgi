@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -28,6 +30,8 @@ import (
 func main() {
 	opts := log.BuildZapOptions(flag.CommandLine)
 	log := zap.New(zap.UseFlagOptions(&opts))
+	klog.SetLogger(log)
+	ctrl.SetLogger(log)
 	flag.Parse()
 
 	must := func(err error, op string) {
