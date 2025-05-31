@@ -62,6 +62,8 @@ func logEventsForPod(ctx context.Context, c client.WithWatch, namespace string, 
 		}
 	}
 
+	log = log.WithValues("source", "events")
+
 	listOptions := []client.ListOption{
 		client.InNamespace(namespace),
 		// k8s.io/kubernetes/pkg/registry/core/event.ToSelectableFields
