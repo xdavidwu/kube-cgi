@@ -103,7 +103,7 @@ func sanitize(i rune) rune {
 }
 
 func namify(i string) string {
-	return strings.TrimLeft(strings.Map(sanitize, strings.ToLower(i)), "-")
+	return strings.Trim(strings.Map(sanitize, strings.ToLower(i)), "-")
 }
 
 // k8s.io/kubernetes/third_party/forked/golang/expansion
