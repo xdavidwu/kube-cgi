@@ -278,10 +278,22 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h KubernetesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var stack http.Handler = kHandler(h)
-	if h.Spec.Request != nil && h.Spec.Request.Schema != nil {
-		schema := jsonschema.MustCompileString("api.schema.json", h.Spec.Request.Schema.RawJSON)
-		stack = middlewares.ValidateJson(stack, schema)
+
+	if h.Spec.Request != nil {
+		rSpec := h.Spec.Request
+
+		if rSpec.Schema != nil {
+			schema := jsonschema.MustCompileString("api.schema.json", rSpec.Schema.RawJSON)
+			stack = middlewares.ValidateJson(stack, schema)
+		}
+
+		if rSpec.Authentication != nil &&
+			rSpec.Authentication.PreShared != nil &&
+			rSpec.Authentication.PreShared.SecretKeyRef != nil {
+			// TODO
+		}
 	}
+
 	middlewares.Intrument(middlewares.LogWithIdentifier(
 		middlewares.DrainBody(stack)), h.Spec.Path).
 		ServeHTTP(w, r)
