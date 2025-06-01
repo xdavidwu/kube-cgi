@@ -2,17 +2,17 @@ package cgid
 
 import (
 	"context"
+	"os"
 )
 
 const (
 	BodyEnvKey = "REQUEST_BODY"
-
-	// include/uapi/linux/binfmts.h:#define MAX_ARG_STRLEN (PAGE_SIZE * 32)
-	// actually depends on page size, but let's just assume 4k
-	MaxArgStrlen = 4096 * 32
 )
 
 var (
+	// include/uapi/linux/binfmts.h:#define MAX_ARG_STRLEN (PAGE_SIZE * 32)
+	MaxArgStrlen = os.Getpagesize() * 32
+
 	BodyEnvMaxSize = MaxArgStrlen - 2 - len(BodyEnvKey)
 )
 
