@@ -7511,6 +7511,22 @@ spec:
                         rule: '!has(self.ephemeralContainers)'
                     request:
                       properties:
+                        authentication:
+                          properties:
+                            preShared:
+                              properties:
+                                secretKeyRef:
+                                  properties:
+                                    key:
+                                      type: string
+                                    name:
+                                      type: string
+                                  required:
+                                  - key
+                                  - name
+                                  type: object
+                              type: object
+                          type: object
                         schema:
                           description: |-
                             JSON Schema to validate requests with, as an inline object.

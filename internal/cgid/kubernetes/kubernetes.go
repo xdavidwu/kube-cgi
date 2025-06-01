@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -28,7 +29,10 @@ import (
 	"github.com/xdavidwu/kube-cgi/internal/cgid/middlewares"
 )
 
+// TODO derive config at controller to avoid these
 //+kubebuilder:rbac:groups=kube-cgi.aic.cs.nycu.edu.tw,resources=apisets,verbs=get
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get
+
 //+kubebuilder:rbac:groups="",resources=pods,verbs=*
 //+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 //+kubebuilder:rbac:groups="",resources=pods/attach,verbs=create
@@ -276,12 +280,45 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TODO do init stuff elsewhere
 func (h KubernetesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var stack http.Handler = kHandler(h)
-	if h.Spec.Request != nil && h.Spec.Request.Schema != nil {
-		schema := jsonschema.MustCompileString("api.schema.json", h.Spec.Request.Schema.RawJSON)
-		stack = middlewares.ValidateJson(stack, schema)
+
+	if h.Spec.Request != nil {
+		rSpec := h.Spec.Request
+
+		if rSpec.Schema != nil {
+			schema := jsonschema.MustCompileString("api.schema.json", rSpec.Schema.RawJSON)
+			stack = middlewares.ValidateJson(stack, schema)
+		}
+
+		if rSpec.Authentication != nil &&
+			rSpec.Authentication.PreShared != nil &&
+			rSpec.Authentication.PreShared.SecretKeyRef != nil {
+			log := logr.FromContextOrDiscard(r.Context())
+			ref := rSpec.Authentication.PreShared.SecretKeyRef
+
+			var secret corev1.Secret
+			err := h.Client.Get(
+				r.Context(),
+				client.ObjectKey{Namespace: h.Namespace, Name: ref.Name},
+				&secret,
+			)
+			if err != nil {
+				log.Error(err, "cannot get secret", "namespace", h.Namespace, "name", ref.Name)
+				panic(err)
+			}
+
+			v, ok := secret.Data[ref.Key]
+			if !ok {
+				err = fmt.Errorf("referred key not found in secret")
+				log.Error(err, "cannot get pre-shared token", "namespace", h.Namespace, "name", ref.Name, "key", ref.Key)
+				panic(err)
+			}
+			stack = middlewares.AuthnWithPreShared(stack, string(v))
+		}
 	}
+
 	middlewares.Intrument(middlewares.LogWithIdentifier(
 		middlewares.DrainBody(stack)), h.Spec.Path).
 		ServeHTTP(w, r)

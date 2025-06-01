@@ -21,10 +21,28 @@ func (s *Schema) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// not optional unlike core/v1
+
+type SecretKeyRef struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+}
+
+// TODO ValidatingAdmissionPolicy to ensure (only) one of union fields is set
+
+type PreShared struct {
+	SecretKeyRef *SecretKeyRef `json:"secretKeyRef,omitempty"`
+}
+
+type Authentication struct {
+	PreShared *PreShared `json:"preShared,omitempty"`
+}
+
 type Request struct {
 	// JSON Schema to validate requests with, as an inline object.
 	// Empty object may be used to enforce being JSON only.
-	Schema *Schema `json:"schema,omitempty"`
+	Schema         *Schema         `json:"schema,omitempty"`
+	Authentication *Authentication `json:"authentication,omitempty"`
 }
 
 type Response struct {
