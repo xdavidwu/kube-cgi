@@ -44,14 +44,6 @@ rules:
   - ""
   resources:
   - serviceaccounts
-  verbs:
-  - create
-  - list
-  - patch
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - services
   verbs:
   - create
