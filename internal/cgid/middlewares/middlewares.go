@@ -36,6 +36,7 @@ func DrainBody(next http.Handler) http.Handler {
 }
 
 func writeError(w http.ResponseWriter, statusCode int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	m := cgid.ErrorResponse{Message: msg}
 	body, _ := json.Marshal(m)
