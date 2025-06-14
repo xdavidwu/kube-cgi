@@ -142,8 +142,9 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 			OwnerReferences: []metav1.OwnerReference{h.OwnerReference},
 		},
-		Spec: *h.Spec.PodSpec.DeepCopy(),
 	}
+	h.Spec.PodSpec.DeepCopyInto(&pod.Spec)
+
 	for k, v := range cgi.VarsFromRequest(r) {
 		if cgid.EnvTooLarge(k, v) {
 			w.WriteHeader(http.StatusRequestHeaderFieldsTooLarge)
