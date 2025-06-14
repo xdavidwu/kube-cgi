@@ -3,6 +3,8 @@ package middlewares
 import (
 	"net/http"
 	"strings"
+
+	"github.com/xdavidwu/kube-cgi/internal/cgid"
 )
 
 const (
@@ -22,11 +24,11 @@ func AuthnWithPreShared(next http.Handler, secret string) http.Handler {
 		t := bearerTokenFromRequest(r)
 
 		if t == "" {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			cgid.WriteError(w, http.StatusUnauthorized, "authentication required")
 			return
 		}
 		if t != secret {
-			writeError(w, http.StatusForbidden, "forbidden")
+			cgid.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 

@@ -2,6 +2,8 @@ package cgid
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 	"os"
 )
 
@@ -46,4 +48,13 @@ func BodyFromContext(ctx context.Context) []byte {
 
 type ErrorResponse struct {
 	Message string `json:"error"`
+}
+
+func WriteError(w http.ResponseWriter, statusCode int, msg string) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	m := ErrorResponse{Message: msg}
+	body, _ := json.Marshal(m)
+	_, err := w.Write(body)
+	return err
 }

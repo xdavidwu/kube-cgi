@@ -35,14 +35,6 @@ func DrainBody(next http.Handler) http.Handler {
 	})
 }
 
-func writeError(w http.ResponseWriter, statusCode int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	m := cgid.ErrorResponse{Message: msg}
-	body, _ := json.Marshal(m)
-	w.Write(body)
-}
-
 func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes := cgid.BodyFromContext(r.Context())
@@ -55,11 +47,11 @@ func ValidateJson(next http.Handler, jsonSchema *jsonschema.Schema) http.Handler
 
 		var v any
 		if json.Unmarshal(bytes, &v) != nil {
-			writeError(w, http.StatusUnprocessableEntity, "request body is not json")
+			cgid.WriteError(w, http.StatusUnprocessableEntity, "request body is not json")
 			return
 		}
 		if err := jsonSchema.Validate(v); err != nil {
-			writeError(w, http.StatusUnprocessableEntity, err.Error())
+			cgid.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 			return
 		}
 
