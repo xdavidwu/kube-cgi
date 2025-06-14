@@ -147,7 +147,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for k, v := range cgi.VarsFromRequest(r) {
 		if cgid.EnvTooLarge(k, v) {
-			w.WriteHeader(http.StatusRequestHeaderFieldsTooLarge)
+			cgid.WriteError(w, http.StatusRequestHeaderFieldsTooLarge, "")
 			return
 		}
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
@@ -164,7 +164,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if !pod.Spec.Containers[0].Stdin {
 			log.Info("request body not drained for env but script does not accept stdin, rejecting request")
-			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			cgid.WriteError(w, http.StatusRequestEntityTooLarge, "")
 			return
 		}
 		log.Info("request body not drained for env, relying on stdin only for request body")
@@ -274,7 +274,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		panic("not implemented")
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		cgid.WriteError(w, http.StatusInternalServerError, "")
 		log.Error(err, "cannnot proxy cgi response")
 	} else {
 		log.Info("response streamed")
