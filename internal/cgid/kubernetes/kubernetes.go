@@ -230,10 +230,11 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Namespace(h.Namespace).Resource("pods").
 			Name(pod.ObjectMeta.Name).SubResource("attach").
 			VersionedParams(&corev1.PodAttachOptions{
-				Stdin:  true,
-				Stdout: false,
-				Stderr: false,
-				TTY:    false,
+				Container: container.Name,
+				Stdin:     true,
+				Stdout:    false,
+				Stderr:    false,
+				TTY:       false,
 			}, scheme.ParameterCodec).URL()
 		attach, err := remotecommand.NewSPDYExecutor(h.ClientConfig, "POST", url)
 		// does not really fire request yet, nothing should happen
@@ -265,8 +266,10 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// XXX dynamic client supports only CRUD subresources
 	pods := h.OldClient.CoreV1().Pods(h.Namespace)
-	reader, err := pods.GetLogs(pod.ObjectMeta.Name,
-		&corev1.PodLogOptions{Follow: true}).Stream(ctx)
+	reader, err := pods.GetLogs(pod.ObjectMeta.Name, &corev1.PodLogOptions{
+		Container: container.Name,
+		Follow:    true,
+	}).Stream(ctx)
 	must(err, "get pod logs")
 	defer reader.Close()
 	redir, err := cgi.WriteResponse(w, reader)
