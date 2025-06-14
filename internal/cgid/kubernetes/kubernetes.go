@@ -117,6 +117,14 @@ func escapeKubernetesExpansion(i string) string {
 	return strings.ReplaceAll(i, "$", "$$")
 }
 
+func containerStarted(pod *corev1.Pod) bool {
+	if len(pod.Status.ContainerStatuses) > 0 {
+		c := pod.Status.ContainerStatuses[0]
+		return c.Started != nil && *c.Started
+	}
+	return false
+}
+
 type kHandler KubernetesHandler
 
 func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -212,20 +220,17 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return false, nil
 			}
 			pod := event.Object.(*corev1.Pod)
-			if pod.Status.Phase == corev1.PodRunning {
-				return true, nil
-			}
 			if pod.Status.Phase == corev1.PodSucceeded ||
 				pod.Status.Phase == corev1.PodFailed {
 				return true, nil
 			}
-			return false, nil
+			return containerStarted(pod), nil
 		},
 	)
 	must(err, "watch pod")
 	pod = lastEvent.Object.(*corev1.Pod)
 
-	if container.Stdin && pod.Status.Phase == corev1.PodRunning {
+	if container.Stdin && containerStarted(pod) {
 		url := h.OldClient.CoreV1().RESTClient().Post().
 			Namespace(h.Namespace).Resource("pods").
 			Name(pod.ObjectMeta.Name).SubResource("attach").
