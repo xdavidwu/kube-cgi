@@ -24,11 +24,11 @@ func AuthnWithPreShared(next http.Handler, secret string) http.Handler {
 		t := bearerTokenFromRequest(r)
 
 		if t == "" {
-			cgid.WriteError(w, http.StatusUnauthorized, "authentication required")
+			cgid.WriteError(w, http.StatusUnauthorized, "")
 			return
 		}
 		if t != secret {
-			cgid.WriteError(w, http.StatusForbidden, "forbidden")
+			cgid.WriteError(w, http.StatusForbidden, "")
 			return
 		}
 

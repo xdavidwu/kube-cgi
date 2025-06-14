@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const (
@@ -53,6 +54,11 @@ type ErrorResponse struct {
 func WriteError(w http.ResponseWriter, statusCode int, msg string) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
+
+	if msg == "" {
+		msg = strings.ToLower(http.StatusText(statusCode))
+	}
+
 	m := ErrorResponse{Message: msg}
 	body, _ := json.Marshal(m)
 	_, err := w.Write(body)
