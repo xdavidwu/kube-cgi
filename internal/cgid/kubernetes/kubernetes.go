@@ -144,25 +144,26 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	h.Spec.PodSpec.DeepCopyInto(&pod.Spec)
+	container := &pod.Spec.Containers[0]
 
 	for k, v := range cgi.VarsFromRequest(r) {
 		if cgid.EnvTooLarge(k, v) {
 			cgid.WriteError(w, http.StatusRequestHeaderFieldsTooLarge, "")
 			return
 		}
-		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
+		container.Env = append(container.Env, corev1.EnvVar{
 			Name:  k,
 			Value: escapeKubernetesExpansion(v),
 		})
 	}
 
 	if input != nil {
-		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{
+		container.Env = append(container.Env, corev1.EnvVar{
 			Name:  cgid.BodyEnvKey,
 			Value: escapeKubernetesExpansion(string(input)),
 		})
 	} else {
-		if !pod.Spec.Containers[0].Stdin {
+		if !container.Stdin {
 			log.Info("request body not drained for env but script does not accept stdin, rejecting request")
 			cgid.WriteError(w, http.StatusRequestEntityTooLarge, "")
 			return
@@ -224,7 +225,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	must(err, "watch pod")
 	pod = lastEvent.Object.(*corev1.Pod)
 
-	if pod.Spec.Containers[0].Stdin && pod.Status.Phase == corev1.PodRunning {
+	if container.Stdin && pod.Status.Phase == corev1.PodRunning {
 		url := h.OldClient.CoreV1().RESTClient().Post().
 			Namespace(h.Namespace).Resource("pods").
 			Name(pod.ObjectMeta.Name).SubResource("attach").
