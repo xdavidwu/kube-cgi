@@ -205,7 +205,7 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		watcherWithOpts(ctx, h.Client, &list, watchOptions...),
 		func(event watch.Event) (bool, error) {
 			if event.Type == watch.Deleted {
-				log.Info("pod deleted while still waiting")
+				return false, fmt.Errorf("pod deleted while still waiting")
 			}
 			if event.Type != watch.Added && event.Type != watch.Modified {
 				return false, nil
