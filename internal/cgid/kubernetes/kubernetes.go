@@ -270,12 +270,12 @@ func (h kHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer reader.Close()
 	redir, err := cgi.WriteResponse(w, reader)
 	if redir != "" {
-		log.Info("interal redirects not implemented")
+		log.Info("internal redirects not implemented")
 		panic("not implemented")
 	}
 	if err != nil {
 		cgid.WriteError(w, http.StatusInternalServerError, "")
-		log.Error(err, "cannnot proxy cgi response")
+		log.Error(err, "cannot proxy cgi response")
 	} else {
 		log.Info("response streamed")
 	}
@@ -320,7 +320,7 @@ func (h KubernetesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	middlewares.Intrument(middlewares.LogWithIdentifier(
+	middlewares.Instrument(middlewares.LogWithIdentifier(
 		middlewares.DrainBody(stack)), h.Spec.Path).
 		ServeHTTP(w, r)
 }

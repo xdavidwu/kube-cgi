@@ -51,7 +51,7 @@ func cleanupOldGeneration(log logr.Logger, c client.Client, current *kubecgiv1al
 			continue
 		}
 		if pod.Status.Phase == corev1.PodRunning {
-			log.Info("found running pod of previous geneation",
+			log.Info("found running pod of previous generation",
 				"pod", pod.Name, "generation", generation, "phase", pod.Status.Phase)
 			continue
 		}

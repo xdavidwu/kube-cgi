@@ -36,7 +36,7 @@ func MustRegisterCollectors(r *prometheus.Registry) {
 	r.MustRegister(httpRequests, httpRequestsDuration, httpInflightRequests)
 }
 
-func Intrument(next http.Handler, name string) http.Handler {
+func Instrument(next http.Handler, name string) http.Handler {
 	prepopulateLabels := prometheus.Labels{"handler": name, "code": "200"}
 	httpRequests.With(prepopulateLabels)
 	httpRequestsDuration.With(prepopulateLabels)
