@@ -292,8 +292,24 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if labels == nil {
 			labels = map[string]string{}
 		}
+		for k, v := range apiSet.Labels {
+			if _, ok := labels[k]; !ok {
+				labels[k] = v
+			}
+		}
 		labels[managedByKey] = managedByManager
 		obj.obj.SetLabels(labels)
+
+		annotations := obj.obj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		for k, v := range apiSet.Annotations {
+			if _, ok := annotations[k]; !ok {
+				annotations[k] = v
+			}
+		}
+		obj.obj.SetAnnotations(annotations)
 
 		err = r.Patch(ctx, obj.obj, client.Apply, client.ForceOwnership, client.FieldOwner(fieldManager))
 		if err != nil {
