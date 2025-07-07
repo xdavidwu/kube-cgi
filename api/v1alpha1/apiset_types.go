@@ -73,6 +73,8 @@ type HistoryLimit struct {
 
 type API struct {
 	// Path of this API endpoint.
+	// In GO net/http.ServeMux PATH pattern (without METHOD or HOST).
+	// Values of wildcard segments will be passed as PATH_VALUE_<identifier in upper case> environment variables.
 	// /readyz is reserved for internal readiness checks.
 	//+kubebuilder:validation:Format=uri
 	Path string `json:"path"`
