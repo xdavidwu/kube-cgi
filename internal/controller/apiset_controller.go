@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -56,6 +57,26 @@ const (
 var (
 	apiSetKey = kubecgiv1alpha1.GroupVersion.Group + "/apiset"
 )
+
+func pathSpecToRule(p string) (string, networkingv1.PathType) {
+	prefix := ""
+	for _, s := range strings.Split(p, "/") {
+		if s == "" {
+			continue
+		}
+		if s == "{$}" {
+			return prefix + "/", networkingv1.PathTypeExact
+		}
+		if s[0] == '{' {
+			return prefix, networkingv1.PathTypePrefix
+		}
+		prefix = prefix + "/" + s
+	}
+	if strings.HasSuffix(p, "/") {
+		return prefix, networkingv1.PathTypePrefix
+	}
+	return prefix, networkingv1.PathTypeExact
+}
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -166,12 +187,12 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		},
 	}
 
-	pathTypeExact := networkingv1.PathTypeExact
 	paths := make([]networkingv1.HTTPIngressPath, len(apiSet.Spec.APIs))
 	for i := range apiSet.Spec.APIs {
+		path, pathType := pathSpecToRule(apiSet.Spec.APIs[i].Path)
 		paths[i] = networkingv1.HTTPIngressPath{
-			Path:     apiSet.Spec.APIs[i].Path,
-			PathType: &pathTypeExact,
+			Path:     path,
+			PathType: &pathType,
 			Backend: networkingv1.IngressBackend{
 				Service: &networkingv1.IngressServiceBackend{
 					Name: req.Name,
