@@ -88,7 +88,7 @@ func (r APISet) validate() (admission.Warnings, error) {
 
 	if len(errs) != 0 {
 		return nil, errors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "APTSet"},
+			schema.GroupKind{Group: GroupVersion.Group, Kind: "APISet"},
 			r.Name, errs)
 	}
 	return nil, nil
