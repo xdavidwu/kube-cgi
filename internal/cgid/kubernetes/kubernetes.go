@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -27,6 +26,7 @@ import (
 	"github.com/xdavidwu/kube-cgi/internal/cgid"
 	"github.com/xdavidwu/kube-cgi/internal/cgid/cgi"
 	"github.com/xdavidwu/kube-cgi/internal/cgid/middlewares"
+	"github.com/xdavidwu/kube-cgi/internal/schema"
 )
 
 // TODO derive config at controller to avoid these
@@ -296,16 +296,20 @@ func (h KubernetesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if h.Spec.Request != nil {
 		rSpec := h.Spec.Request
+		log := logr.FromContextOrDiscard(r.Context())
 
 		if rSpec.Schema != nil {
-			schema := jsonschema.MustCompileString("api.schema.json", rSpec.Schema.RawJSON)
+			schema, err := schema.CompileString(rSpec.Schema.RawJSON)
+			if err != nil {
+				log.Error(err, "cannot compile schema", "schema", rSpec.Schema.RawJSON)
+				panic(err)
+			}
 			stack = middlewares.ValidateJson(stack, schema)
 		}
 
 		if rSpec.Authentication != nil &&
 			rSpec.Authentication.PreShared != nil &&
 			rSpec.Authentication.PreShared.SecretKeyRef != nil {
-			log := logr.FromContextOrDiscard(r.Context())
 			ref := rSpec.Authentication.PreShared.SecretKeyRef
 
 			var secret corev1.Secret

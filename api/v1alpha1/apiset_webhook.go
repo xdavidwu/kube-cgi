@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"net/http"
 
-	"github.com/santhosh-tekuri/jsonschema/v5"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -12,6 +11,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	kcgischema "github.com/xdavidwu/kube-cgi/internal/schema"
 )
 
 // log is for logging in this package.
@@ -75,12 +76,12 @@ func (r APISet) validate() (admission.Warnings, error) {
 		}
 
 		if api.Request != nil && api.Request.Schema != nil {
-			_, err := jsonschema.CompileString("api.schema.json", api.Request.Schema.RawJSON)
+			_, err := kcgischema.CompileString(api.Request.Schema.RawJSON)
 			if err != nil {
 				errs = append(errs, field.Invalid(
 					p.Child("request", "schema"),
 					api.Request.Schema.RawJSON,
-					err.(*jsonschema.SchemaError).Unwrap().Error(),
+					err.Error(),
 				))
 			}
 		}

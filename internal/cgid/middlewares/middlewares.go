@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
-	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/xdavidwu/kube-cgi/internal/cgid"
