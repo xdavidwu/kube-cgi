@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func buildAPISetWithSchema(schema string) *APISet {
+func buildAPISet(path, schema string) *APISet {
 	return &APISet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -17,7 +17,7 @@ func buildAPISetWithSchema(schema string) *APISet {
 			Host: "example.local",
 			APIs: []API{
 				{
-					Path: "/test",
+					Path: path,
 					PodSpec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -39,16 +39,19 @@ func buildAPISetWithSchema(schema string) *APISet {
 }
 
 var _ = Describe("validation webhook", func() {
-	Context("when creating APISet", func() {
-		It("accepts when schema is not valid", func(ctx SpecContext) {
-			err := k8sClient.Create(ctx, buildAPISetWithSchema(`{"type": "object"}`))
-			Expect(err).NotTo(HaveOccurred())
-		})
+	DescribeTable("when creating APISet",
+		func(ctx SpecContext, path, schema, msg string) {
+			err := k8sClient.Create(ctx, buildAPISet(path, schema))
+			if msg == "" {
+				Expect(err).NotTo(HaveOccurred())
+			} else {
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(msg))
+			}
+		},
+		Entry("accepts when schema and path are valid", "/valid", `{"type": "object"}`, ""),
 
-		It("rejects when schema is not valid", func(ctx SpecContext) {
-			err := k8sClient.Create(ctx, buildAPISetWithSchema(`{"type": "invalid"}`))
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("spec.apis[0].request.schema"))
-		})
-	})
+		Entry("rejects when schema is not valid", "/valid", `{"type": "invalid"}`, "spec.apis[0].request.schema"),
+		Entry("rejects when path is not valid", "/{invalid", `{"type": "object"}`, "spec.apis[0].path"),
+	)
 })
