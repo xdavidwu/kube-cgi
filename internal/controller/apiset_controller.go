@@ -324,8 +324,7 @@ func (r *APISetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
-	soTrue := true
-	apiSet.Status.Deployed = &soTrue
+	apiSet.Status.Deployed = new(true)
 	return ctrl.Result{}, err
 }
 

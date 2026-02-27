@@ -1,8 +1,6 @@
 module github.com/xdavidwu/kube-cgi
 
-go 1.23
-
-toolchain go1.24.2
+go 1.26.0
 
 require (
 	github.com/go-logr/logr v1.3.0
