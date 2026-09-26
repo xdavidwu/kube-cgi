@@ -29,10 +29,11 @@ import (
 
 func main() {
 	opts := log.BuildZapOptions(flag.CommandLine)
+	flag.Parse()
+
 	log := zap.New(zap.UseFlagOptions(&opts))
 	klog.SetLogger(log)
 	ctrl.SetLogger(log)
-	flag.Parse()
 
 	must := func(err error, op string) {
 		if err != nil {
